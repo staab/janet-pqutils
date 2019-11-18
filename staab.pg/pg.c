@@ -1,4 +1,5 @@
 #include <janet.h>
+#include <libpq-fe.h>
 
 static Janet myfun(int32_t argc, const Janet *argv) {
     janet_fixarity(argc, 0);
