@@ -24,8 +24,19 @@
            "postgresql/src/interfaces/libpq/pqexpbuffer.c"
            "postgresql/src/interfaces/libpq/pthread-win32.c"
            "postgresql/src/interfaces/libpq/win32.c"]
- :cflags @["-Ipostgresql/src/interfaces/libpq"
-           "-Ipostgresql/src/include"
-           "-Ipostgresql/src/port"])
+ :cflags @["-Ipostgresql/build/include"
+           "-Ipostgresql/build/include/libpq"
+           "-Ipostgresql/build/include/internal"
+           "-Ipostgresql/build/include/internal/libpq"
+           "-Ipostgresql/build/include/server"
+           "-Lpostgresql/build/lib"])
 
-(os/shell "cd postgresql/src/interfaces/libpq && make ../../../src/port/pg_config_paths.h")
+(defn clean-pg []
+  (os/shell "cd postgresql && rm -rf build && make distclean"))
+
+(defn build-pg []
+  (os/shell "cd postgresql && ./configure --prefix=$(pwd)/build")
+  (os/shell "cd postgresql && make -C src/bin install")
+  (os/shell "cd postgresql && make -C src/include install")
+  (os/shell "cd postgresql && make -C src/interfaces install")
+  (os/shell "cd postgresql && make -C doc install"))
