@@ -24,12 +24,12 @@
            "postgresql/src/interfaces/libpq/pqexpbuffer.c"
            "postgresql/src/interfaces/libpq/pthread-win32.c"
            "postgresql/src/interfaces/libpq/win32.c"]
- :cflags @["-Ipostgresql/build/include"
-           "-Ipostgresql/build/include/libpq"
+ :cflags @[
+           "-Ipostgresql/build/include"
            "-Ipostgresql/build/include/internal"
-           "-Ipostgresql/build/include/internal/libpq"
            "-Ipostgresql/build/include/server"
-           "-Lpostgresql/build/lib"])
+           "-Ipostgresql/src/port"
+           ])
 
 (defn clean-pg []
   (os/shell "cd postgresql && rm -rf build && make distclean"))
