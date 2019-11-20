@@ -1,8 +1,7 @@
 #include <janet.h>
 #include <libpq-fe.h>
 
-
-static Janet myfun(int32_t argc, const Janet *argv) {
+static Janet myfun(int32_t argc, Janet *argv) {
     PGconn *conn;
 
     conn = PQconnectdb("dbname = ccapi");
