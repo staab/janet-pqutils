@@ -1,9 +1,14 @@
 #include <janet.h>
 #include <libpq-fe.h>
 
+
 static Janet myfun(int32_t argc, const Janet *argv) {
-    janet_fixarity(argc, 0);
-    printf("hello from a modxule!\n");
+    PGconn *conn;
+
+    conn = PQconnectdb("dbname = ccapi");
+
+    PQfinish(conn);
+
     return janet_wrap_nil();
 }
 

@@ -5,5 +5,5 @@
 (declare-native
  :name "pg"
  :source @["staab.pg/pg.c"]
- :cflags @["-I./postgresql/src/interfaces/libpq"
-           "-I./postgresql/src/include"])
+ :cflags @["-Ipostgresql/src/interfaces/libpq"
+           "-Ipostgresql/src/include"])
