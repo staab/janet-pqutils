@@ -38,7 +38,7 @@ static Janet cfun_disconnect(int32_t argc, Janet *argv) {
     PGconn *conn = janet_getabstract(argv, 0, &Connection_jt);
 
     // This is breaking everything
-    PQfinish(conn);
+    // PQfinish(conn);
 
     return janet_wrap_nil();
 }
