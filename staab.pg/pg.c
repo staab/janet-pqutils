@@ -1,10 +1,13 @@
+#include <stdio.h>
 #include <janet.h>
 #include <libpq-fe.h>
+
+#define p(s) fprintf(stderr, "%s\n", s)
 
 static int connection_gc(void *p, size_t size) {
     (void) size;
 
-    PQfinish((PGconn *)p);
+    PQfinish(*(PGconn **)p);
 
     return 0;
 }
