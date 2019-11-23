@@ -1,3 +1,4 @@
 (import build/pg :as pg)
+(use staab.assert/assert)
 
-(pp (pg/disconnect (pg/connect "dbname = ccapi")))
+(assert= 1 (pg/disconnect (pg/connect "dbname = ccapi"))))

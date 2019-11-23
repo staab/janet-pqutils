@@ -11,4 +11,5 @@
  :source @["staab.pg/pg.c"]
  :cflags @[(string "-I" (pg-config "--includedir"))
            (string "-L" (pg-config "--libdir"))
+           "-fsanitize=undefined"
            "-lpq"])

@@ -4,9 +4,7 @@
 static int connection_gc(void *p, size_t size) {
     (void) size;
 
-    printf("%s", "gc");
-
-    PQfinish((PGconn *) p);
+    PQfinish((PGconn *)p);
 
     return 0;
 }
@@ -35,10 +33,9 @@ static Janet cfun_connect(int32_t argc, Janet *argv) {
 static Janet cfun_disconnect(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    PGconn *conn = janet_getabstract(argv, 0, &Connection_jt);
+    PGconn* *conn = janet_getabstract(argv, 0, &Connection_jt);
 
-    // This is breaking everything
-    // PQfinish(conn);
+    PQfinish(*conn);
 
     return janet_wrap_nil();
 }
