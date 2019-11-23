@@ -7,6 +7,7 @@
 
 typedef struct {
     PGconn* handle;
+    const uint8_t* info;
     int flags;
 } Conn;
 
@@ -26,12 +27,10 @@ static int connection_gc(void *p, size_t size) {
 }
 
 static void connection_tostring(void *p, JanetBuffer *buffer) {
-    Conn* conn = *(Conn **)p;
-    char* dbname = PQdb(conn->handle);
-    char repr[32];
+    Conn* conn = (Conn *)p;
+    char repr[sizeof(conn->info) + 26];
 
-    // TODO: I can't get dbname to be anything but (null)
-    sprintf(repr, "<pg/connection %s>", dbname);
+    sprintf(repr, "<pg/connection %s>", conn->info);
 
     janet_buffer_push_cstring(buffer, repr);
 }
@@ -50,8 +49,8 @@ static struct JanetAbstractType Conn_jt = {
 static Janet cfun_connect(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    const uint8_t *conninfo = janet_getstring(argv, 0);
-    PGconn *handle = PQconnectdb((char *)conninfo);
+    const uint8_t *info = janet_getstring(argv, 0);
+    PGconn *handle = PQconnectdb((char *)info);
 
     if (PQstatus(handle) != CONNECTION_OK) {
         janet_panicf("Connection to database failed: %s", PQerrorMessage(handle));
@@ -67,6 +66,7 @@ static Janet cfun_connect(int32_t argc, Janet *argv) {
     }
 
     Conn *conn = janet_abstract(&Conn_jt, sizeof(Conn*));
+    conn->info = info;
     conn->handle = handle;
     conn->flags = 0;
 
