@@ -2,4 +2,13 @@
 (use staab.assert/assert)
 
 (let [c (pg/connect "dbname = postgres")]
-  (pp c))
+  (assert=
+    "<pg/connection dbname = postgres>"
+   (string/format "%q" c))
+  (assert=
+   "<pg/literal 'that''s'>"
+   (string/format "%q" (pg/literal c "that's")))
+  (assert=
+   "<pg/identifier \"Royal \"\"we\"\"\">"
+   (string/format "%q" (pg/identifier c "Royal \"we\""))))
+
