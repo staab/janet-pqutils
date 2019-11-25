@@ -1,4 +1,5 @@
 #include <janet.h>
+#include "pg.h"
 
 int string_in_array(char *val, int32_t argc, char *argv[]) {
     int i;

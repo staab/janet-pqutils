@@ -1,8 +1,7 @@
-#include <stdio.h>
 #include <janet.h>
 #include <libpq-fe.h>
+#include "pg.h"
 
-#define p(s) fprintf(stderr, "|| DEBUG: %s\n", s)
 #define FLAG_CLOSED 1
 
 typedef struct {
@@ -83,88 +82,12 @@ static Janet cfun_disconnect(int32_t argc, Janet *argv) {
     return janet_wrap_nil();
 }
 
-static int escaped_gc(void *p, size_t size) {
-    (void) size;
-
-    // PGfreemem(*(char **)p);
-
-    return 0;
-}
-
-static void literal_tostring(void *p, JanetBuffer *buffer) {
-    char* literal = (char *)p;
-    char repr[strlen(literal) + 20];
-
-    sprintf(repr, "<pg/literal %s>", literal);
-
-    janet_buffer_push_cstring(buffer, repr);
-}
-
-static struct JanetAbstractType Literal_jt = {
-    "pg/literal",
-    escaped_gc,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    literal_tostring
-};
-
-static Janet cfun_literal(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
-
-    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
-    char* str = (char *)janet_getstring(argv, 1);
-    char* safe = PQescapeLiteral(connection->handle, str, strlen(str));
-    char* literal = janet_abstract(&Literal_jt, strlen(safe));
-
-    sprintf(literal, "%s", safe);
-
-    return janet_wrap_abstract(literal);
-}
-
-static void identifier_tostring(void *p, JanetBuffer *buffer) {
-    char* identifier = (char *)p;
-    char repr[strlen(identifier) + 9];
-
-    sprintf(repr, "<pg/identifier %s>", identifier);
-
-    janet_buffer_push_cstring(buffer, repr);
-}
-
-static struct JanetAbstractType Identifier_jt = {
-    "pg/identifier",
-    escaped_gc,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    identifier_tostring
-};
-
-static Janet cfun_identifier(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
-
-    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
-    char* str = (char *)janet_getstring(argv, 1);
-    char* safe = PQescapeIdentifier(connection->handle, str, strlen(str));
-    char* ident = janet_abstract(&Identifier_jt, strlen(safe));
-
-    sprintf(ident, "%s", safe);
-
-    return janet_wrap_abstract(ident);
-}
-
 static const JanetReg cfuns[] = {
     {"connect", cfun_connect, "(pg/connect)\n\nReturns a postgresql connection."},
     {"disconnect", cfun_disconnect, "(pg/disconnect)\n\nCloses a postgresql connection"},
-    {"literal", cfun_literal, "(pg/literal)\n\nEscapes a string as a postgresql literal"},
-    {"identifier", cfun_identifier, "(pg/identifier)\n\nEscapes a string as a postgresql identifier"},
     {NULL, NULL, NULL}
 };
 
 JANET_MODULE_ENTRY(JanetTable *env) {
-    janet_cfuns(env, "staab.pg", cfuns);
+    janet_cfuns(env, "staab.pg/connection", cfuns);
 }
