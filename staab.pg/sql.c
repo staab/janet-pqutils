@@ -74,7 +74,8 @@ static Janet cfun_sql_identifier(int32_t argc, Janet *argv) {
 }
 
 typedef struct {
-    JanetArray* children;
+    int32_t size;
+    SQLFragment* children;
 } SQLComposite;
 
 static int composite_mark(void *p, size_t size) {
@@ -101,12 +102,50 @@ static struct JanetAbstractType SQLComposite_jt = {
 static Janet cfun_sql_composite(int32_t argc, Janet *argv) {
     janet_arity(argc, 1, -1);
 
-    JanetArray *children = janet_array_n(argv, argc);
+    SQLFragment children[argc];
+
+    for (int i = 0; i < argc; i++) {
+        SQLFragment *fragment = janet_getabstract(argv, i, &SQLFragment_jt);
+        children[i] = *fragment;
+    }
 
     SQLComposite *composite = janet_abstract(&SQLComposite_jt, sizeof(SQLComposite*));
+    composite->size = argc;
     composite->children = children;
 
     return janet_wrap_abstract(composite);
+}
+
+static Janet cfun_sql_stringify(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 1);
+
+    SQLComposite *composite = janet_getabstract(argv, 0, &SQLComposite_jt);
+
+    fprintf(stderr, "|| DEBUG: %u\n", composite->size);
+
+    for (int i = 0; i < composite->size; i++) {
+        SQLFragment *child = &composite->children[i];
+
+        p(child->type);
+        p(child->contents);
+
+        // free(buf);
+        // buf = (char*)malloc(strlen(cresult) + strlen(child->contents) + 1);
+        // strcpy(buf, cresult);
+
+        // switch (*child->type) {
+        //     default:
+        //         strcpy(buf, child->contents);
+        // }
+
+        // cresult = buf;
+    }
+
+    // Janet* result = janet_cstring(cresult);
+
+    // free(cresult);
+
+    return janet_wrap_nil();
 }
 
 static const JanetReg sql_cfuns[] = {
@@ -114,6 +153,7 @@ static const JanetReg sql_cfuns[] = {
     {"literal", cfun_sql_literal, "(pg/literal)\n\nCreates a sql literal."},
     {"identifier", cfun_sql_identifier, "(pg/identifier)\n\nCreates a sql identifier."},
     {"composite", cfun_sql_composite, "(pg/composite)\n\nCreates a sql composite from fragments."},
+    {"stringify", cfun_sql_stringify, "(pg/stringify)\n\nEscapes components of a sql composite and returns a string."},
     {NULL, NULL, NULL}
 };
 
