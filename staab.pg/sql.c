@@ -75,7 +75,7 @@ static Janet cfun_sql_identifier(int32_t argc, Janet *argv) {
 
 typedef struct {
     int32_t size;
-    SQLFragment* children;
+    SQLFragment* children[];
 } SQLComposite;
 
 static int composite_mark(void *p, size_t size) {
@@ -102,16 +102,13 @@ static struct JanetAbstractType SQLComposite_jt = {
 static Janet cfun_sql_composite(int32_t argc, Janet *argv) {
     janet_arity(argc, 1, -1);
 
-    SQLFragment children[argc];
+    SQLComposite *composite = janet_abstract(&SQLComposite_jt, sizeof(SQLComposite*));
+    composite->size = argc;
 
     for (int i = 0; i < argc; i++) {
         SQLFragment *fragment = janet_getabstract(argv, i, &SQLFragment_jt);
-        children[i] = *fragment;
+        composite->children[i] = fragment;
     }
-
-    SQLComposite *composite = janet_abstract(&SQLComposite_jt, sizeof(SQLComposite*));
-    composite->size = argc;
-    composite->children = children;
 
     return janet_wrap_abstract(composite);
 }
@@ -121,31 +118,28 @@ static Janet cfun_sql_stringify(int32_t argc, Janet *argv) {
 
     SQLComposite *composite = janet_getabstract(argv, 0, &SQLComposite_jt);
 
-    fprintf(stderr, "|| DEBUG: %u\n", composite->size);
+    char* result = malloc(1);
 
     for (int i = 0; i < composite->size; i++) {
-        SQLFragment *child = &composite->children[i];
+        SQLFragment *child = composite->children[i];
 
-        p(child->type);
-        p(child->contents);
+        if (i > 0) {
+            result = realloc(result, strlen(result) + 1);
+            strcat(result, " ");
+        }
 
-        // free(buf);
-        // buf = (char*)malloc(strlen(cresult) + strlen(child->contents) + 1);
-        // strcpy(buf, cresult);
-
-        // switch (*child->type) {
-        //     default:
-        //         strcpy(buf, child->contents);
-        // }
-
-        // cresult = buf;
+        switch (*child->type) {
+            default:
+                result = realloc(result, strlen(result) + strlen(child->contents));
+                strcat(result, child->contents);
+        }
     }
 
-    // Janet* result = janet_cstring(cresult);
+    uint8_t* janet_result = (uint8_t*)janet_cstring(result);
 
-    // free(cresult);
+    free(result);
 
-    return janet_wrap_nil();
+    return janet_wrap_string(janet_result);
 }
 
 static const JanetReg sql_cfuns[] = {
