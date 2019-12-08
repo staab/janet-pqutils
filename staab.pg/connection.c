@@ -82,9 +82,37 @@ static Janet cfun_disconnect(int32_t argc, Janet *argv) {
     return janet_wrap_nil();
 }
 
+static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+
+    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
+    char* input = (char*)janet_getstring(argv, 1);
+    char* output = PQescapeLiteral(connection->handle, input, strlen(input));
+    const uint8_t* result = janet_string((uint8_t*)output, strlen(output));
+
+    PQfreemem(output);
+
+    return janet_wrap_string(result);
+}
+
+static Janet cfun_escape_identifier(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+
+    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
+    char* input = (char*)janet_getstring(argv, 1);
+    char* output = PQescapeIdentifier(connection->handle, input, strlen(input));
+    const uint8_t* result = janet_string((uint8_t*)output, strlen(output));
+
+    PQfreemem(output);
+
+    return janet_wrap_string(result);
+}
+
 static const JanetReg cfuns[] = {
     {"connect", cfun_connect, "(pg/connect)\n\nReturns a postgresql connection."},
     {"disconnect", cfun_disconnect, "(pg/disconnect)\n\nCloses a postgresql connection"},
+    {"escape-literal", cfun_escape_literal, "(pg/escape-literal)\n\nEscapes a literal string"},
+    {"escape-identifier", cfun_escape_identifier, "(pg/escape-identifier)\n\nEscapes an identifier"},
     {NULL, NULL, NULL}
 };
 
