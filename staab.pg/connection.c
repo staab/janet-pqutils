@@ -82,6 +82,48 @@ static Janet cfun_disconnect(int32_t argc, Janet *argv) {
     return janet_wrap_nil();
 }
 
+static Janet cfun_exec(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+
+    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
+    char* command = (char*)janet_getstring(argv, 1);
+
+    PGresult* res = PQexecParams(connection->handle, command, 0, NULL, NULL, NULL, NULL, 0);
+    char* error = PQresultErrorMessage(res);
+
+    if (strcmp(error, "")){
+        PQclear(res);
+
+        janet_panic(error);
+    }
+
+    ExecStatusType status = PQresultStatus(res);
+
+    if (status != PGRES_TUPLES_OK) {
+        PQclear(res);
+
+        return janet_wrap_nil();
+    }
+
+
+    int n_results = PQntuples(res);
+    int n_fields = PQnfields(res);
+    JanetTable* table = janet_table(n_results);
+
+    for (int i = 0; i < n_results; i++) {
+        for (int j = 0; j < n_fields; j++) {
+            char* k = PQfname(res, j);
+            char* v = PQgetvalue(res, i, j);
+
+            janet_table_put(table, janet_wrap_string(k), janet_wrap_string(v));
+        }
+    }
+
+    PQclear(res);
+
+    return janet_wrap_table(table);
+}
+
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
@@ -111,6 +153,7 @@ static Janet cfun_escape_identifier(int32_t argc, Janet *argv) {
 static const JanetReg cfuns[] = {
     {"connect", cfun_connect, "(pg/connect)\n\nReturns a postgresql connection."},
     {"disconnect", cfun_disconnect, "(pg/disconnect)\n\nCloses a postgresql connection"},
+    {"exec", cfun_exec, "(pg/exec)\n\nExecutes a query with optional parameters"},
     {"escape-literal", cfun_escape_literal, "(pg/escape-literal)\n\nEscapes a literal string"},
     {"escape-identifier", cfun_escape_identifier, "(pg/escape-identifier)\n\nEscapes an identifier"},
     {NULL, NULL, NULL}

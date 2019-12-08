@@ -9,3 +9,4 @@
 (assert= "'hello ''there'''" (escape-literal connection "hello 'there'"))
 (assert= "\"x'y\"\"z\"" (escape-identifier connection "x'y\"z"))
 
+(pp (exec connection "select 1 as x"))
