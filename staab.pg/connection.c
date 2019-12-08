@@ -108,20 +108,24 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
 
     int n_results = PQntuples(res);
     int n_fields = PQnfields(res);
-    JanetTable* table = janet_table(n_results);
+    JanetArray* results = janet_array(0);
 
     for (int i = 0; i < n_results; i++) {
+        JanetTable* table = janet_table(0);
+
         for (int j = 0; j < n_fields; j++) {
             char* k = PQfname(res, j);
             char* v = PQgetvalue(res, i, j);
 
             janet_table_put(table, janet_wrap_string(k), janet_wrap_string(v));
         }
+
+        janet_array_push(results, janet_wrap_table(table));
     }
 
     PQclear(res);
 
-    return janet_wrap_table(table);
+    return janet_wrap_array(results);
 }
 
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
