@@ -17,7 +17,3 @@
  :source @["staab.pg/connection.c"]
  :cflags cflags)
 
-(declare-native
- :name "sql"
- :source @["staab.pg/sql.c"]
- :cflags cflags)
