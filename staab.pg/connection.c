@@ -89,15 +89,21 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
     char* command = (char*)janet_getstring(argv, 1);
 
     PGresult* res = PQexecParams(connection->handle, command, 0, NULL, NULL, NULL, NULL, 0);
+    ExecStatusType status = PQresultStatus(res);
     char* error = PQresultErrorMessage(res);
 
-    if (strcmp(error, "")){
-        PQclear(res);
-
-        janet_panic(error);
+    switch (status) {
+        case PGRES_FATAL_ERROR:
+        case PGRES_BAD_RESPONSE:
+            PQclear(res);
+            janet_panic(strcmp(error, "") ? error: "Fatal error!");
+            break;
+        case PGRES_NONFATAL_ERROR:
+            fprintf(stderr, "%s", error);
+            break;
+        default:
+            break;
     }
-
-    ExecStatusType status = PQresultStatus(res);
 
     if (status != PGRES_TUPLES_OK) {
         PQclear(res);
@@ -105,27 +111,26 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
         return janet_wrap_nil();
     }
 
-
     int n_results = PQntuples(res);
     int n_fields = PQnfields(res);
-    JanetArray* results = janet_array(0);
+    JanetArray* rows = janet_array(n_results);
 
     for (int i = 0; i < n_results; i++) {
-        JanetTable* table = janet_table(0);
+        JanetKV *row = janet_struct_begin(n_fields);
 
         for (int j = 0; j < n_fields; j++) {
             char* k = PQfname(res, j);
             char* v = PQgetvalue(res, i, j);
 
-            janet_table_put(table, janet_wrap_string(k), janet_wrap_string(v));
+            janet_struct_put(row, janet_ckeywordv(k), janet_cstringv(v));
         }
 
-        janet_array_push(results, janet_wrap_table(table));
+        janet_array_push(rows, janet_wrap_struct(janet_struct_end(row)));
     }
 
     PQclear(res);
 
-    return janet_wrap_array(results);
+    return janet_wrap_array(rows);
 }
 
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
