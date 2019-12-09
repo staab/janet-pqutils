@@ -7,15 +7,19 @@
 (assert= "'hello ''there'''" (escape-literal connection "hello 'there'"))
 (assert= "\"x'y\"\"z\"" (escape-identifier connection "x'y\"z"))
 
-(assert=
- [{:tablename "pg_authid" :schemaname "pg_catalog"}
-  {:tablename "pg_auth_members" :schemaname "pg_catalog"}]
  (let [t (escape-identifier connection "pg_tables")
        t_col (escape-identifier connection "tablename")
        s_col (escape-identifier connection "schemaname")
        pattern (escape-literal connection "pg_auth%")
-       query ["select" t_col "," s_col "from" t "where" t_col "LIKE" pattern]]
-   (tuple ;(exec connection (string/join query " ")))))
+       query ["select" t_col "," s_col "from" t "where" t_col "LIKE" pattern]
+       result (exec connection (string/join query " "))]
+   (assert=
+    {:tablename "pg_authid" :schemaname "pg_catalog"}
+    (collect-row result 0))
+   (assert=
+    [{:tablename "pg_authid" :schemaname "pg_catalog"}
+     {:tablename "pg_auth_members" :schemaname "pg_catalog"}]
+     (tuple ;(collect-all result))))
 
 (disconnect connection)
 
