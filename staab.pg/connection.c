@@ -64,7 +64,7 @@ static Janet cfun_connect(int32_t argc, Janet *argv) {
         PQclear(res);
     }
 
-    Connection *connection = janet_abstract(&Connection_jt, sizeof(Connection*));
+    Connection *connection = janet_abstract(&Connection_jt, sizeof(Connection));
     connection->info = info;
     connection->handle = handle;
     connection->flags = 0;
@@ -75,9 +75,9 @@ static Janet cfun_connect(int32_t argc, Janet *argv) {
 static Janet cfun_disconnect(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
-    Connection* *connection = janet_getabstract(argv, 0, &Connection_jt);
+    Connection *connection = janet_getabstract(argv, 0, &Connection_jt);
 
-    connection_close(*connection);
+    connection_close(connection);
 
     return janet_wrap_nil();
 }
@@ -90,13 +90,13 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
 
     PGresult* res = PQexecParams(connection->handle, command, 0, NULL, NULL, NULL, NULL, 0);
     ExecStatusType status = PQresultStatus(res);
-    char* error = PQresultErrorMessage(res);
+    char* error = PQerrorMessage(connection->handle);
 
     switch (status) {
         case PGRES_FATAL_ERROR:
         case PGRES_BAD_RESPONSE:
             PQclear(res);
-            janet_panic(strcmp(error, "") ? error: "Fatal error!");
+            janet_panic(error);
             break;
         case PGRES_NONFATAL_ERROR:
             fprintf(stderr, "%s", error);
