@@ -15,11 +15,11 @@
        result (exec connection (string/join query " "))]
    (assert=
     {:tablename "pg_authid" :schemaname "pg_catalog"}
-    (collect-row result 0))
+    (collect-row connection result 0))
    (assert=
     [{:tablename "pg_authid" :schemaname "pg_catalog"}
      {:tablename "pg_auth_members" :schemaname "pg_catalog"}]
-     (tuple ;(collect-all result))))
+     (tuple ;(collect-all connection result))))
 
 (disconnect connection)
 

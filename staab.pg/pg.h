@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #define p(s) fprintf(stderr, "|| DEBUG: %s\n", s)
+#define pj(j) janet_printf("|| DEBUG: %v\n", j)
 
 static Janet cfun_connect(int32_t argc, Janet *argv);
 static Janet cfun_disconnect(int32_t argc, Janet *argv);
