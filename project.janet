@@ -13,7 +13,7 @@
  :description "A libpq wrapper for Janet")
 
 (declare-native
- :name "connection"
- :source @["staab.pg/connection.c"]
+ :name "core"
+ :source @["staab.pg/core.c"]
  :cflags cflags)
 

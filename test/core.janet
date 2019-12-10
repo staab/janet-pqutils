@@ -1,4 +1,4 @@
-(use build/connection)
+(use build/core)
 (use staab.assert/assert)
 
 # String representations and escapings should work
@@ -34,6 +34,7 @@
   (assert= {:x false} (collect-row c (exec c "select false as x") 0)))
 
 # Closed connections should throw appropriate errors
+
 (let [c (connect "dbname = postgres")]
   (disconnect c)
   (assert-err (exec c "select 1"))
