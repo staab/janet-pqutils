@@ -21,7 +21,7 @@ static void connection_close(Connection *connection) {
 static int connection_gc(void *p, size_t size) {
     (void) size;
 
-    connection_close(*(Connection **)p);
+    connection_close((Connection*)p);
 
     return 0;
 }
@@ -29,7 +29,7 @@ static int connection_gc(void *p, size_t size) {
 static int connection_mark(void *p, size_t size) {
     (void) size;
 
-    Connection* connection = *(Connection **)p;
+    Connection* connection = (Connection*)p;
 
     janet_mark(janet_wrap_table(connection->oids));
 
@@ -122,9 +122,9 @@ static struct JanetAbstractType Result_jt = {
 void populate_oids(Connection* connection, Result* result) {
     for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
         int oid = PQftype(result->handle, col_idx);
-        const JanetKV *match = janet_table_find(connection->oids, janet_wrap_integer(oid));
+        Janet match = janet_table_get(connection->oids, janet_wrap_integer(oid));
 
-        if (!match) {
+        if (janet_equals(match, janet_wrap_nil())) {
             int oid_length = snprintf(NULL, 0, "%d", oid);
             char* query = malloc(oid_length + 23);
 
@@ -156,17 +156,33 @@ static Janet result_get_value(Connection* connection, Result *result, int row_id
 
     char* v = PQgetvalue(result->handle, row_idx, col_idx);
     int oid = PQftype(result->handle, col_idx);
-    const JanetKV *oid_kv = janet_table_find(connection->oids, janet_wrap_integer(oid));
+    Janet oid_name = janet_table_get(connection->oids, janet_wrap_integer(oid));
 
-    if (!oid_kv) {
+    if (janet_equals(oid_name, janet_wrap_nil())) {
         janet_panic("Failed to find oid (this is a bug)");
     }
 
-    if (janet_equals(oid_kv->value, janet_cstringv("text"))) {
-        return oid_kv->value;
+    if (
+        janet_equals(oid_name, janet_cstringv("integer"))     ||
+        janet_equals(oid_name, janet_cstringv("numeric"))     ||
+        janet_equals(oid_name, janet_cstringv("bigserial"))   ||
+        janet_equals(oid_name, janet_cstringv("bigint"))      ||
+        janet_equals(oid_name, janet_cstringv("double"))      ||
+        janet_equals(oid_name, janet_cstringv("real"))        ||
+        janet_equals(oid_name, janet_cstringv("smallint"))    ||
+        janet_equals(oid_name, janet_cstringv("smallserial")) ||
+        janet_equals(oid_name, janet_cstringv("serial"))
+    ) {
+        double number;
+        janet_scan_number((const uint8_t*)v, strlen(v), &number);
+        return janet_wrap_number(number);
     }
 
-    return oid_kv->value;
+    if (janet_equals(oid_name, janet_cstringv("boolean"))) {
+        return strcmp(v, "t") == 0 ? janet_wrap_true() : janet_wrap_false();
+    }
+
+    return janet_cstringv(v);
 }
 
 static Janet cfun_exec(int32_t argc, Janet *argv) {
@@ -243,7 +259,7 @@ static Janet cfun_collect_all(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
     Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
-    Result* result = janet_getabstract(argv, 0, &Result_jt);
+    Result* result = janet_getabstract(argv, 1, &Result_jt);
 
     JanetArray* rows = janet_array(result->n_tuples);
 
