@@ -43,10 +43,13 @@
     (array/push result row))
   (assert= text-query-result (tuple ;result)))
 
-(assert= 2 (x/count text-query))
+(assert= 2 (x/count (x/exec text-query)))
 (assert= text-query-result (x/all text-query))
 (assert= (get text-query-result 1) (x/nth text-query 1))
+(assert-err (x/nth text-query 10))
 (assert= (first text-query-result) (x/one text-query))
+(assert= nil (x/one "select 1 where false = true"))
 (assert= 3 (x/scalar "select 3"))
+(assert= nil (x/scalar "select 3 where false = true"))
 (assert= [1 2] (x/col text-query :int))
 

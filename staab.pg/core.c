@@ -229,9 +229,11 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
 }
 
 static Janet cfun_collect_count(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 1);
+    janet_fixarity(argc, 2);
 
-    Result* result = janet_getabstract(argv, 0, &Result_jt);
+    // For api consistency we require a connection object, but we don't use it
+    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
+    Result* result = janet_getabstract(argv, 1, &Result_jt);
 
     return janet_wrap_integer(result->n_tuples);
 }

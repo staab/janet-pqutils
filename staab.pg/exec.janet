@@ -29,11 +29,11 @@
 
 (defn exec [q] (core/exec (get-connection) q))
 
-(defn count [q] (core/collect-count (exec q)))
+(defn count [result] (core/collect-count (get-connection) result))
 
 (defn iter [q]
   (let [result (exec q)]
-    (loop [idx :range [0 (core/collect-count result)]]
+    (loop [idx :range [0 (core/collect-count (get-connection) result)]]
       (yield (core/collect-row (get-connection) result idx)))))
 
 (defn generator [q]
@@ -43,9 +43,12 @@
 
 (defn nth [q idx] (core/collect-row (get-connection) (exec q) idx))
 
-(defn one [q] (nth q 0))
+(defn one [q]
+  (let [result (exec q)]
+    (when (> (count result) 0)
+      (core/collect-row (get-connection) result 0))))
 
-(defn scalar [q] (first (values (one q))))
+(defn scalar [q] (if-let [row (one q)] (first (values row))))
 
 (defn col [q k]
   (let [result @[]]
