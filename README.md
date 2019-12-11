@@ -10,7 +10,7 @@ This library depends on libpq being installed. At the very least, [libpq](https:
 
 janet-pg comes with two layers; the first is written in c, and lives in `staab.pg/core`. This provides a very basic (and incomplete) glue layer between janet and libpq. If you need lots of control, you can call this layer directly, but `staab.pg/exec` is a janet wrapper that is more convenient and provides more functionality.
 
-To get you started, check out the example program before
+To get you started, check out the example program below:
 
 ```
 (import staab.pg/exec as x)
