@@ -32,6 +32,7 @@ static int connection_mark(void *p, size_t size) {
     Connection* connection = (Connection*)p;
 
     janet_mark(janet_wrap_table(connection->oids));
+    janet_mark(janet_wrap_string(connection->info));
 
     return 0;
 }
