@@ -18,11 +18,11 @@
       query ["select" t_col "," s_col "from" t "where" t_col "LIKE" pattern]
       result (exec c (string/join query " "))]
   (assert=
-   {:tablename "pg_authid" :schemaname "pg_catalog"}
+   {:tablename :pg_authid :schemaname :pg_catalog}
    (collect-row c result 0))
   (assert=
-   [{:tablename "pg_authid" :schemaname "pg_catalog"}
-    {:tablename "pg_auth_members" :schemaname "pg_catalog"}]
+   [{:tablename :pg_authid :schemaname :pg_catalog}
+    {:tablename :pg_auth_members :schemaname :pg_catalog}]
     (tuple ;(collect-all c result))))
 
 # Make sure various data types are coerced properly

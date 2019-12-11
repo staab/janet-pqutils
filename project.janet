@@ -17,3 +17,5 @@
  :source @["staab.pg/core.c"]
  :cflags cflags)
 
+(declare-source
+  :source ["staab.pg"])

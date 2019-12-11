@@ -182,6 +182,10 @@ static Janet result_get_value(Connection* connection, Result *result, int row_id
         return strcmp(v, "t") == 0 ? janet_wrap_true() : janet_wrap_false();
     }
 
+    if (janet_equals(oid_name, janet_cstringv("name"))) {
+        return janet_ckeywordv(v);
+    }
+
     return janet_cstringv(v);
 }
 
@@ -261,22 +265,22 @@ static Janet cfun_collect_all(int32_t argc, Janet *argv) {
     Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
     Result* result = janet_getabstract(argv, 1, &Result_jt);
 
-    JanetArray* rows = janet_array(result->n_tuples);
+    Janet* rows = janet_tuple_begin(result->n_tuples);
 
     for (int row_idx = 0; row_idx < result->n_tuples; row_idx++) {
         JanetKV *row = janet_struct_begin(result->n_fields);
 
-        for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
+        for (int32_t col_idx = 0; col_idx < result->n_fields; col_idx++) {
             char* k = PQfname(result->handle, col_idx);
             Janet v = result_get_value(connection, result, row_idx, col_idx);
 
             janet_struct_put(row, janet_ckeywordv(k), v);
         }
 
-        janet_array_push(rows, janet_wrap_struct(janet_struct_end(row)));
+        rows[row_idx] = janet_wrap_struct(janet_struct_end(row));
     }
 
-    return janet_wrap_array(rows);
+    return janet_wrap_tuple(janet_tuple_end(rows));
 }
 
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
@@ -309,6 +313,7 @@ static const JanetReg cfuns[] = {
     {"connect", cfun_connect, "(pg/connect)\n\nReturns a postgresql connection."},
     {"disconnect", cfun_disconnect, "(pg/disconnect)\n\nCloses a postgresql connection"},
     {"exec", cfun_exec, "(pg/exec)\n\nExecutes a query with optional parameters"},
+    {"collect-count", cfun_collect_count, "(pg/collect-count)\n\nReturns the number of rows for a query result"},
     {"collect-row", cfun_collect_row, "(pg/collect-row)\n\nCollects a single result of a query"},
     {"collect-all", cfun_collect_all, "(pg/collect-all)\n\nCollects all results of a query"},
     {"escape-literal", cfun_escape_literal, "(pg/escape-literal)\n\nEscapes a literal string"},
