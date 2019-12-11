@@ -13,15 +13,16 @@ janet-pg comes with two layers; the first is written in c, and lives in `staab.p
 To get started, check out the example program below:
 
 ```
-(import staab.pg/exec as x)
+(import staab.pg/exec :as x)
 
+# By default, connect sets the connection to a global dynamic binding
 (x/connect "postgres://localhost:5432/mydb")
 
 # Lazily iterate over results
-(loop [{:a a :b b} :generate (x/generator "select a, b from mytable")]
-  (pp (+ a b)))
+(loop [row :generate (x/generator "select a, b from mytable")]
+  (pp (+ ;(values row))))
 
-# Temporarily use a different database, disconnectin when done
+# Temporarily use a different database, disconnecting when done
 (x/with-connect ["postgres://localhost:5432/myotherdb"]
   # Return a tuple of values for column "a"
   (pp (x/col "select a from mytable" :a)))
@@ -29,7 +30,7 @@ To get started, check out the example program below:
 # Back at mydb again
 (let [res (x/exec "select * from mytable")]
   # Count reads metadata, it doesn't re-execute the query
-  (when (> (x/count res) 10) (x/nth res 9)))
+  (when (>= (x/count res) 10) (x/nth res 9)))
 
 # Manually disconnect
 (x/disconnect)
