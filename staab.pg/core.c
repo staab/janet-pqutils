@@ -163,27 +163,29 @@ static Janet result_get_value(Connection* connection, Result *result, int row_id
         janet_panic("Failed to find oid (this is a bug)");
     }
 
+    uint8_t* oid_str = (uint8_t*)janet_unwrap_string(oid_name);
+
     if (
-        janet_equals(oid_name, janet_cstringv("integer"))     ||
-        janet_equals(oid_name, janet_cstringv("numeric"))     ||
-        janet_equals(oid_name, janet_cstringv("bigserial"))   ||
-        janet_equals(oid_name, janet_cstringv("bigint"))      ||
-        janet_equals(oid_name, janet_cstringv("double"))      ||
-        janet_equals(oid_name, janet_cstringv("real"))        ||
-        janet_equals(oid_name, janet_cstringv("smallint"))    ||
-        janet_equals(oid_name, janet_cstringv("smallserial")) ||
-        janet_equals(oid_name, janet_cstringv("serial"))
+        janet_cstrcmp(oid_str, "integer") == 0     ||
+        janet_cstrcmp(oid_str, "numeric") == 0     ||
+        janet_cstrcmp(oid_str, "bigserial") == 0   ||
+        janet_cstrcmp(oid_str, "bigint") == 0      ||
+        janet_cstrcmp(oid_str, "double") == 0      ||
+        janet_cstrcmp(oid_str, "real") == 0        ||
+        janet_cstrcmp(oid_str, "smallint") == 0    ||
+        janet_cstrcmp(oid_str, "smallserial") == 0 ||
+        janet_cstrcmp(oid_str, "serial") == 0
     ) {
         double number;
         janet_scan_number((const uint8_t*)v, strlen(v), &number);
         return janet_wrap_number(number);
     }
 
-    if (janet_equals(oid_name, janet_cstringv("boolean"))) {
+    if (janet_cstrcmp(oid_str, "boolean") == 0) {
         return strcmp(v, "t") == 0 ? janet_wrap_true() : janet_wrap_false();
     }
 
-    if (janet_equals(oid_name, janet_cstringv("name"))) {
+    if (janet_cstrcmp(oid_str, "name") == 0) {
         return janet_ckeywordv(v);
     }
 
