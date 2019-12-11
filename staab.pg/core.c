@@ -96,6 +96,7 @@ static Janet cfun_disconnect(int32_t argc, Janet *argv) {
 }
 
 typedef struct {
+    Connection* connection;
     PGresult* handle;
     int n_tuples;
     int n_fields;
@@ -109,10 +110,20 @@ static int result_gc(void *p, size_t size) {
     return 0;
 }
 
+static int result_mark(void *p, size_t size) {
+    (void) size;
+
+    Result* result = (Result*)p;
+
+    janet_mark(janet_wrap_abstract(result->connection));
+
+    return 0;
+}
+
 static struct JanetAbstractType Result_jt = {
     "pg/result",
     result_gc,
-    NULL,
+    result_mark,
     NULL,
     NULL,
     NULL,
@@ -222,6 +233,7 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
     }
 
     Result *result = janet_abstract(&Result_jt, sizeof(Result));
+    result->connection = connection;
     result->handle = pgres;
     result->n_tuples = PQntuples(pgres);
     result->n_fields = PQnfields(pgres);
