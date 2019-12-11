@@ -2,6 +2,8 @@
 
 This is the primary interface for running queries against postgres. In general, it manages your connection by placing it into a single `:pg/global-conn` dynamic binding.
 
+For convenience, everything in this namespace that accepts a query string also accepts a Result.
+
 **`get-connection -> Connection`**
 
 Checks the type of `(dyn :pg/global-conn)` and returns it.
@@ -22,19 +24,19 @@ Escapes a string for use in a query as a literal using the global connection obj
 
 Escapes a string for use in a query as an identifer using the global connection object.
 
-**`exec : string -> Result`**
+**`exec : string|Result -> Result`**
 
 Runs a query against the global connection and returns the result.
 
-**`count : Result -> int`**
+**`count : string|Result -> int`**
 
 Returns the number of rows in a result.
 
-**`iter : string -> nil`**
+**`iter : string|Result -> nil`**
 
 Takes a query string and yields rows one by one to the current fiber. Prefer `generator` to `iter`.
 
-**`generator : string -> fiber`**
+**`generator : string|Result -> fiber`**
 
 Wraps `iter` in a fiber that inherits the current environment and captures rows yielded. This is the best way to lazily iterate over rows in a result set, e.g.:
 
@@ -45,23 +47,23 @@ Wraps `iter` in a fiber that inherits the current environment and captures rows 
   (pp rows))
 ```
 
-**`all : string -> [{keyword any}]`**
+**`all : string|Result -> [{keyword any}]`**
 
 Takes a query and returns all rows.
 
-**`nth : string -> {keyword any}`**
+**`nth : string|Result -> {keyword any}`**
 
 Takes a query and returns the nth row. Panics if the row is out of bounds.
 
-**`one : string -> {keyword any}`**
+**`one : string|Result -> {keyword any}`**
 
 Takes a query and returns the first row. Returns nil if there are no results.
 
-**`scalar : string -> any`**
+**`scalar : string|Result -> any`**
 
 Takes a query and returns some value in the first row of the result set. Which field it chooses when there are multiple is undefined, so only use this with a
 query that returns a single field.
 
-**`col : string keyword -> [any]`**
+**`col : string|Result keyword -> [any]`**
 
 Takes a query and a key and returns a tuple of the values for that key.

@@ -29,7 +29,9 @@ To get started, check out the example program below:
 
 # Back at mydb again
 (let [res (x/exec "select * from mytable")]
-  # Count reads metadata, it doesn't re-execute the query
+  # Count reads metadata, it doesn't re-execute the query. In cases
+  # like this, it's useful to pass a result rather than a query string.
+  # Everything in exec supports this overloading.
   (when (>= (x/count res) 10) (x/nth res 9)))
 
 # Manually disconnect

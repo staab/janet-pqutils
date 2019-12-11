@@ -27,14 +27,19 @@
 
 (defn identifier [s] (core/escape-identifier (get-connection) (string s)))
 
-(defn exec [q] (core/exec (get-connection) q))
+(defn exec
+  "Takes a string and executes it with the current connection, returing
+   a result. If a result is passed instead, it passes the result through.
+   This allows passing a result wherever you would otherwise pass a string
+   and re-use most of the query execution api."
+  [q] (if (= :pg/result (type q)) q (core/exec (get-connection) q)))
 
-(defn count [result] (core/collect-count (get-connection) result))
+(defn count [q] (core/collect-count (get-connection) (exec q)))
 
 (defn iter [q]
-  (let [result (exec q)]
-    (loop [idx :range [0 (core/collect-count (get-connection) result)]]
-      (yield (core/collect-row (get-connection) result idx)))))
+  (def r (exec q))
+  (loop [idx :range [0 (core/collect-count (get-connection) r)]]
+    (yield (core/collect-row (get-connection) r idx))))
 
 (defn generator [q]
   (fiber/new |(iter q) :iy))
@@ -44,14 +49,15 @@
 (defn nth [q idx] (core/collect-row (get-connection) (exec q) idx))
 
 (defn one [q]
-  (let [result (exec q)]
-    (when (> (count result) 0)
-      (core/collect-row (get-connection) result 0))))
+  (def r (exec q))
+  (when (> (count r) 0)
+    (core/collect-row (get-connection) r 0)))
 
-(defn scalar [q] (if-let [row (one q)] (first (values row))))
+(defn scalar [q]
+  (if-let [row (one q)] (first (values row))))
 
 (defn col [q k]
-  (let [result @[]]
+  (let [results @[]]
     (loop [row :generate (generator q)]
-      (array/push result (row k)))
-    (tuple ;result)))
+      (array/push results (row k)))
+    (tuple ;results)))
