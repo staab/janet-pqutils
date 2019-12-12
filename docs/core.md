@@ -18,13 +18,13 @@ Under the hood, this function uses PQexecParams, but doesn't provide a way to pa
 
 Takes a result and returns the number of rows in the result set.
 
-**`collect-row : Connection Result int -> {keyword any}`**
-
-Takes a connection and a result and returns the nth row of the result set. Panics if the row is out of bounds.
-
-**`collect-all : Connection Result int -> [{keyword any}]`**
+**`collect-all : Result -> [{keyword any}]`**
 
 Takes a connection and a result and returns all rows.
+
+**`collect-row : Result int -> {keyword any}`**
+
+Takes a connection and a result and returns the nth row of the result set. Panics if the row is out of bounds.
 
 **`escape-literal : Connection string -> string`**
 

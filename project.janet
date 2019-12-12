@@ -10,7 +10,8 @@
         flags @[includedir libdir "-lpq"]]
     (when JANET_PG_DEBUG
       (array/push flags "-fsanitize=undefined")
-      (array/push flags "-g"))))
+      (array/push flags "-g"))
+    flags))
 
 (def lflags
   (if JANET_PG_DEBUG @["-g"] @[]))

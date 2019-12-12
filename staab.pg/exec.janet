@@ -34,24 +34,24 @@
    and re-use most of the query execution api."
   [q] (if (= :pg/result (type q)) q (core/exec (get-connection) q)))
 
-(defn count [q] (core/collect-count (get-connection) (exec q)))
+(defn count [q] (core/collect-count (exec q)))
 
 (defn iter [q]
   (def r (exec q))
-  (loop [idx :range [0 (core/collect-count (get-connection) r)]]
-    (yield (core/collect-row (get-connection) r idx))))
+  (loop [idx :range [0 (core/collect-count r)]]
+    (yield (core/collect-row r idx))))
 
 (defn generator [q]
   (fiber/new |(iter q) :iy))
 
-(defn all [q] (core/collect-all (get-connection) (exec q)))
+(defn all [q] (core/collect-all (exec q)))
 
-(defn nth [q idx] (core/collect-row (get-connection) (exec q) idx))
+(defn nth [q idx] (core/collect-row (exec q) idx))
 
 (defn one [q]
   (def r (exec q))
   (when (> (count r) 0)
-    (core/collect-row (get-connection) r 0)))
+    (core/collect-row r 0)))
 
 (defn scalar [q]
   (if-let [row (one q)] (first (values row))))

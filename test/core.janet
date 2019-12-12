@@ -19,19 +19,19 @@
       result (exec c (string/join query " "))]
   (assert=
    {:tablename :pg_authid :schemaname :pg_catalog}
-   (collect-row c result 0))
+   (collect-row result 0))
   (assert=
    [{:tablename :pg_authid :schemaname :pg_catalog}
     {:tablename :pg_auth_members :schemaname :pg_catalog}]
-    (tuple ;(collect-all c result))))
+    (tuple ;(collect-all result))))
 
 # Make sure various data types are coerced properly
 
 (let [c (connect "dbname = postgres")]
-  (assert= {:x 1} (collect-row c (exec c "select 1 as x") 0))
-  (assert= {:x 1.1} (collect-row c (exec c "select 1.1 as x") 0))
-  (assert= {:x true} (collect-row c (exec c "select true as x") 0))
-  (assert= {:x false} (collect-row c (exec c "select false as x") 0)))
+  (assert= {:x 1} (collect-row (exec c "select 1 as x") 0))
+  (assert= {:x 1.1} (collect-row (exec c "select 1.1 as x") 0))
+  (assert= {:x true} (collect-row (exec c "select true as x") 0))
+  (assert= {:x false} (collect-row (exec c "select false as x") 0)))
 
 # Closed connections should throw appropriate errors
 

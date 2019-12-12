@@ -131,10 +131,10 @@ static struct JanetAbstractType Result_jt = {
     NULL
 };
 
-void populate_oids(Connection* connection, Result* result) {
+void populate_oids(Result* result) {
     for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
         int oid = PQftype(result->handle, col_idx);
-        Janet match = janet_table_get(connection->oids, janet_wrap_integer(oid));
+        Janet match = janet_table_get(result->connection->oids, janet_wrap_integer(oid));
 
         if (janet_equals(match, janet_wrap_nil())) {
             int oid_length = snprintf(NULL, 0, "%d", oid);
@@ -142,7 +142,7 @@ void populate_oids(Connection* connection, Result* result) {
 
             sprintf(query, "SELECT %i::oid::regtype", oid);
 
-            PGresult* pgres = PQexec(connection->handle, query);
+            PGresult* pgres = PQexec(result->connection->handle, query);
 
             free(query);
 
@@ -156,19 +156,19 @@ void populate_oids(Connection* connection, Result* result) {
 
             PQclear(pgres);
 
-            janet_table_put(connection->oids, janet_wrap_integer(oid), janet_cstringv(oid_name));
+            janet_table_put(result->connection->oids, janet_wrap_integer(oid), janet_cstringv(oid_name));
         }
     }
 }
 
-static Janet result_get_value(Connection* connection, Result *result, int row_idx, int col_idx) {
+static Janet result_get_value(Result *result, int row_idx, int col_idx) {
     if (PQgetisnull(result->handle, row_idx, col_idx)) {
         return janet_wrap_nil();
     }
 
     char* v = PQgetvalue(result->handle, row_idx, col_idx);
     int oid = PQftype(result->handle, col_idx);
-    Janet oid_name = janet_table_get(connection->oids, janet_wrap_integer(oid));
+    Janet oid_name = janet_table_get(result->connection->oids, janet_wrap_integer(oid));
 
     if (janet_equals(oid_name, janet_wrap_nil())) {
         janet_panic("Failed to find oid (this is a bug)");
@@ -238,27 +238,24 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
     result->n_tuples = PQntuples(pgres);
     result->n_fields = PQnfields(pgres);
 
-    populate_oids(connection, result);
+    populate_oids(result);
 
     return janet_wrap_abstract(result);
 }
 
 static Janet cfun_collect_count(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
+    janet_fixarity(argc, 1);
 
-    // For api consistency we require a connection object, but we don't use it
-    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
-    Result* result = janet_getabstract(argv, 1, &Result_jt);
+    Result* result = janet_getabstract(argv, 0, &Result_jt);
 
     return janet_wrap_integer(result->n_tuples);
 }
 
 static Janet cfun_collect_row(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 3);
+    janet_fixarity(argc, 2);
 
-    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
-    Result* result = janet_getabstract(argv, 1, &Result_jt);
-    int row_idx = janet_getinteger(argv, 2);
+    Result* result = janet_getabstract(argv, 0, &Result_jt);
+    int row_idx = janet_getinteger(argv, 1);
 
     if (row_idx < 0 || row_idx > result->n_tuples) {
         janet_panic("Row index is out of bounds");
@@ -268,7 +265,7 @@ static Janet cfun_collect_row(int32_t argc, Janet *argv) {
 
     for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
         char* k = PQfname(result->handle, col_idx);
-        Janet v = result_get_value(connection, result, row_idx, col_idx);
+        Janet v = result_get_value(result, row_idx, col_idx);
 
         janet_struct_put(row, janet_ckeywordv(k), v);
     }
@@ -277,10 +274,9 @@ static Janet cfun_collect_row(int32_t argc, Janet *argv) {
 }
 
 static Janet cfun_collect_all(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
+    janet_fixarity(argc, 1);
 
-    Connection* connection = janet_getabstract(argv, 0, &Connection_jt);
-    Result* result = janet_getabstract(argv, 1, &Result_jt);
+    Result* result = janet_getabstract(argv, 0, &Result_jt);
 
     Janet* rows = janet_tuple_begin(result->n_tuples);
 
@@ -289,7 +285,7 @@ static Janet cfun_collect_all(int32_t argc, Janet *argv) {
 
         for (int32_t col_idx = 0; col_idx < result->n_fields; col_idx++) {
             char* k = PQfname(result->handle, col_idx);
-            Janet v = result_get_value(connection, result, row_idx, col_idx);
+            Janet v = result_get_value(result, row_idx, col_idx);
 
             janet_struct_put(row, janet_ckeywordv(k), v);
         }
