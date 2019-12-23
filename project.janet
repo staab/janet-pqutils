@@ -18,7 +18,8 @@
 
 (declare-project
  :name "janet-pg"
- :description "A libpq wrapper for Janet")
+ :description "A libpq wrapper for Janet"
+ :dependencies ["https://github.com/staab/janet-assert.git"])
 
 (declare-native
  :name "core"
