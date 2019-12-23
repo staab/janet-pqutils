@@ -60,4 +60,4 @@
   (let [results @[]]
     (loop [row :generate (generator q)]
       (array/push results (row k)))
-    (tuple ;results)))
+    results))

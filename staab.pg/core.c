@@ -261,16 +261,16 @@ static Janet cfun_collect_row(int32_t argc, Janet *argv) {
         janet_panic("Row index is out of bounds");
     }
 
-    JanetKV *row = janet_struct_begin(result->n_fields);
+    JanetTable *row = janet_table(result->n_fields);
 
     for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
         char* k = PQfname(result->handle, col_idx);
         Janet v = result_get_value(result, row_idx, col_idx);
 
-        janet_struct_put(row, janet_ckeywordv(k), v);
+        janet_table_put(row, janet_ckeywordv(k), v);
     }
 
-    return janet_wrap_struct(janet_struct_end(row));
+    return janet_wrap_table(row);
 }
 
 static Janet cfun_collect_all(int32_t argc, Janet *argv) {
@@ -278,22 +278,22 @@ static Janet cfun_collect_all(int32_t argc, Janet *argv) {
 
     Result* result = janet_getabstract(argv, 0, &Result_jt);
 
-    Janet* rows = janet_tuple_begin(result->n_tuples);
+    JanetArray* rows = janet_array(result->n_tuples);
 
     for (int row_idx = 0; row_idx < result->n_tuples; row_idx++) {
-        JanetKV *row = janet_struct_begin(result->n_fields);
+        JanetTable *row = janet_table(result->n_fields);
 
         for (int32_t col_idx = 0; col_idx < result->n_fields; col_idx++) {
             char* k = PQfname(result->handle, col_idx);
             Janet v = result_get_value(result, row_idx, col_idx);
 
-            janet_struct_put(row, janet_ckeywordv(k), v);
+            janet_table_put(row, janet_ckeywordv(k), v);
         }
 
-        rows[row_idx] = janet_wrap_struct(janet_struct_end(row));
+        janet_array_push(rows, janet_wrap_table(row));
     }
 
-    return janet_wrap_tuple(janet_tuple_end(rows));
+    return janet_wrap_array(rows);
 }
 
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
