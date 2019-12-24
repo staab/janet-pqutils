@@ -8,7 +8,11 @@ This library depends on libpq being installed. At the very least, [libpq](https:
 
 # Usage
 
-janet-pg comes with two layers; the first is written in c, and lives in `staab.pg/core`. This provides a very basic (and incomplete) glue layer between janet and libpq. If you need lots of control, you can call this layer directly, but `staab.pg/exec` is a janet wrapper that is more convenient and provides more functionality.
+janet-pg comes with two layers; the first is written in c, and lives in `staab.pg/core`. This provides a very basic (and incomplete) glue layer between janet and libpq. If you need lots of control, or need to tune performance, you can call this layer directly, but `staab.pg/exec` is a janet wrapper that is more convenient and provides more functionality, including:
+
+- A number of convenience wrappers, including `nth`, `col`, `scalar`, and `generate`.
+- Extensible sql -> janet datatype casting (builtins are handled in the core layer).
+- Extensible table/column oriented unpacking
 
 To get started, check out the example program below:
 
@@ -33,6 +37,14 @@ To get started, check out the example program below:
   # like this, it's useful to pass a result rather than a query string.
   # Everything in exec supports this overloading.
   (when (>= (x/count res) 10) (x/nth res 9)))
+
+# Add rules to cast/unpack results from certain tables
+(x/defcast :integer inc)
+(x/defunpack :a/x (fn [k row] (inc (row k))))
+(x/defunpack :a/z (fn [_ row] (+ (row :x) (row :y))))
+
+# Returns {:x 3 :y 2 :z 5}, per above unpack rules
+(x/one "select 1 as x, 1 as y" :a)
 
 # Manually disconnect
 (x/disconnect)

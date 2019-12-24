@@ -51,16 +51,15 @@
 
 (defn defunpack
   "Defines an unpacker function based on a namespace (usually a table name)
-   and a key within that namespace (usually a column name). This can be passed in
-   either as a tuple of [namespace key], or as a namespaced keyword, e.g.,
-   :namespace/key. When unpacking results, the function is used to collect
-   the value from the resulting row, so it should take a key and a row, rather
-   than the value at that location. Example:
+   and a key within that namespace (usually a column name). The dispatch value
+   should be a namespaced keyword, e.g., :namespace/key. When unpacking results,
+   the function is used to collect the value from the resulting row, so it should
+   take a key and a row, rather than the value at that location. Example:
 
-   (defunpack [:my-table :my-col] (fn [k row] (+ (row :other-col) (row k))))
-   (unpack :my-table {:my-col 2 :other-col}) # => {:my-col 3}"
+   (defunpack :my-table/my-col (fn [k row] (+ (row :other-col) (row k))))
+   (unpack :my-table {:my-col 2 :other-col 1}) # => {:my-col 3 :other-col 1}"
   [dv f]
-  (def [ns k] (if (indexed? dv) dv (map keyword (string/split "/" dv))))
+  (def [ns k] (map keyword (string/split "/" dv)))
   (when (nil? (unpackers ns)) (put unpackers ns @{}))
   (put (unpackers ns) k f))
 

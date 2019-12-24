@@ -18,13 +18,21 @@ Under the hood, this function uses PQexecParams, but doesn't provide a way to pa
 
 Takes a result and returns the number of rows in the result set.
 
-**`collect-all : Result -> [{keyword any}]`**
+**`collect-all : Result -> @[@{keyword any}]`**
 
 Takes a connection and a result and returns all rows.
 
-**`collect-row : Result int -> {keyword any}`**
+**`collect-row : Result int -> @{keyword any}`**
 
 Takes a connection and a result and returns the nth row of the result set. Panics if the row is out of bounds.
+
+**`collect-row-meta : Result int -> @[@{keyword any}]`**
+
+Takes a connection and a result and returns metadata the nth row of the result set. Panics if the row is out of bounds. Metadata includes:
+
+- `oid`: keyword corresponding to the column's postgres oid.
+- `name`: the column's name
+- `value`: the columns' value for this row
 
 **`escape-literal : Connection string -> string`**
 
