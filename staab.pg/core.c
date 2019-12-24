@@ -161,6 +161,12 @@ void populate_oids(Result* result) {
     }
 }
 
+static Janet result_get_oid(Result *result, int col_idx) {
+    int oid = PQftype(result->handle, col_idx);
+
+    return janet_table_get(result->connection->oids, janet_wrap_integer(oid));
+}
+
 static Janet result_get_value(Result *result, int row_idx, int col_idx) {
     if (PQgetisnull(result->handle, row_idx, col_idx)) {
         return janet_wrap_nil();
@@ -296,6 +302,35 @@ static Janet cfun_collect_all(int32_t argc, Janet *argv) {
     return janet_wrap_array(rows);
 }
 
+static Janet cfun_collect_row_meta(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+
+    Result* result = janet_getabstract(argv, 0, &Result_jt);
+    int row_idx = janet_getinteger(argv, 1);
+
+    if (row_idx < 0 || row_idx > result->n_tuples) {
+        janet_panic("Row index is out of bounds");
+    }
+
+    JanetArray *row = janet_array(result->n_fields);
+
+    for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
+        char* oid = (char*)janet_unwrap_string(result_get_oid(result, col_idx));
+        char* name = PQfname(result->handle, col_idx);
+        Janet value = result_get_value(result, row_idx, col_idx);
+
+        JanetTable* cell = janet_table(3);
+        janet_table_put(cell, janet_ckeywordv("oid"), janet_ckeywordv(oid));
+        janet_table_put(cell, janet_ckeywordv("name"), janet_ckeywordv(name));
+        janet_table_put(cell, janet_ckeywordv("value"), value);
+
+        janet_array_push(row, janet_wrap_table(cell));
+    }
+
+    return janet_wrap_array(row);
+}
+
+
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
 
@@ -329,6 +364,7 @@ static const JanetReg cfuns[] = {
     {"collect-count", cfun_collect_count, "(pg/collect-count)\n\nReturns the number of rows for a query result"},
     {"collect-row", cfun_collect_row, "(pg/collect-row)\n\nCollects a single result of a query"},
     {"collect-all", cfun_collect_all, "(pg/collect-all)\n\nCollects all results of a query"},
+    {"collect-row-meta", cfun_collect_row_meta, "(pg/collect-row-meta)\n\nCollects full metadata for a result row"},
     {"escape-literal", cfun_escape_literal, "(pg/escape-literal)\n\nEscapes a literal string"},
     {"escape-identifier", cfun_escape_identifier, "(pg/escape-identifier)\n\nEscapes an identifier"},
     {NULL, NULL, NULL}

@@ -19,6 +19,9 @@
       query ["select" t_col "," s_col "from" t "where" t_col "LIKE" pattern]
       result (exec c (string/join query " "))]
   (assert=
+   {:oid :name :value :pg_authid :name :tablename}
+   (->immut (first (collect-row-meta result 0))))
+  (assert=
    {:tablename :pg_authid :schemaname :pg_catalog}
    (->immut (collect-row result 0)))
   (assert=

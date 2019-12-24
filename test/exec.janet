@@ -73,4 +73,11 @@
 (assert= [1 2] (->immut (x/col text-query :int)))
 (assert= [1 2] (->immut (x/col (x/exec text-query) :int)))
 
+# Test that stuff gets unpacked/casted properly
+
+(x/defcast :integer inc)
+(x/defunpack :a/x (fn [k row] (inc (row k))))
+(x/defunpack :a/z (fn [_ row] (+ (row :x) (row :y))))
+
+(assert= {:x 3 :y 2 :z 5} (->immut (x/one "select 1 as x, 1 as y" :a)))
 

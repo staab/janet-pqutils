@@ -36,28 +36,69 @@
 
 (defn count [q] (core/collect-count (exec q)))
 
-(defn iter [q]
+(def- casters @{})
+
+(defn defcast
+  "Defines a function for casting a sql value to janet based on the
+   keywordized string representation of the corresponding postgres oid."
+  [oid f]
+  (put casters oid f))
+
+(defn cast [oid x]
+  ((get casters oid identity) x))
+
+(def- unpackers @{})
+
+(defn defunpack
+  "Defines an unpacker function based on a namespace (usually a table name)
+   and a key within that namespace (usually a column name). This can be passed in
+   either as a tuple of [namespace key], or as a namespaced keyword, e.g.,
+   :namespace/key. When unpacking results, the function is used to collect
+   the value from the resulting row, so it should take a key and a row, rather
+   than the value at that location. Example:
+
+   (defunpack [:my-table :my-col] (fn [k row] (+ (row :other-col) (row k))))
+   (unpack :my-table {:my-col 2 :other-col}) # => {:my-col 3}"
+  [dv f]
+  (def [ns k] (if (indexed? dv) dv (map keyword (string/split "/" dv))))
+  (when (nil? (unpackers ns)) (put unpackers ns @{}))
+  (put (unpackers ns) k f))
+
+(defn nth [q i &opt ns]
   (def r (exec q))
-  (loop [idx :range [0 (core/collect-count r)]]
-    (yield (core/collect-row r idx))))
+  (def row @{})
+  (each {:name k :oid oid :value v} (core/collect-row-meta r i)
+    (put row k (cast oid v)))
+  (def ns-unpackers (get unpackers ns {}))
+  (each k (keys ns-unpackers)
+    (put row k ((ns-unpackers k) k row)))
+  row)
 
-(defn generator [q]
-  (fiber/new |(iter q) :iy))
+(defn iter [q &opt ns]
+  (def r (exec q))
+  (loop [i :range [0 (count r)]]
+    (yield (nth r i ns))))
 
-(defn all [q] (core/collect-all (exec q)))
+(defn generator [q &opt ns]
+  (fiber/new |(iter q ns) :iy))
 
-(defn nth [q idx] (core/collect-row (exec q) idx))
-
-(defn one [q]
+(defn one [q &opt ns]
   (def r (exec q))
   (when (> (count r) 0)
-    (core/collect-row r 0)))
+    (nth r 0 ns)))
 
-(defn scalar [q]
-  (if-let [row (one q)] (first (values row))))
+(defn scalar [q &opt ns]
+  (if-let [row (one q ns)] (first (values row))))
 
-(defn col [q k]
-  (let [results @[]]
-    (loop [row :generate (generator q)]
-      (array/push results (row k)))
-    results))
+(defn col [q k &opt ns]
+  (def results @[])
+  (loop [row :generate (generator q ns)]
+    (array/push results (row k)))
+  results)
+
+(defn all [q &opt ns]
+  (def results @[])
+  (loop [row :generate (generator q ns)]
+    (array/push results row))
+  results)
+
