@@ -12,7 +12,6 @@ janet-pg comes with two layers; the first is written in c, and lives in `staab.p
 
 - A number of convenience wrappers, including `nth`, `col`, `scalar`, and `generate`.
 - Extensible sql -> janet datatype casting (builtins are handled in the core layer).
-- Extensible table/column oriented unpacking
 
 To get started, check out the example program below:
 
@@ -45,13 +44,12 @@ To get started, check out the example program below:
 # Returns @{"x" 1}
 (x/scalar "select jsonb_build_object('x', 1)")
 
-# Add rules to post-process results from certain tables. Read
-# more about how this works at docs/exec.md.
+# Post-process results by type and by custom row unpacking function
 (x/defcast :integer inc)
-(x/defunpack :increment-x (fn [row] (update row :x inc)))
+(defn unpack $(update row :x inc))
 
-# Returns {:x 3 :y 2}, per above unpack rules.
-(x/one "select 1 as x, 1 as y" {:unpack [:increment-x]})
+# Returns {:x 3 :y 2}, per above casting/unpacking logic.
+(x/one "select 1 as x, 1 as y" {:unpack unpack})
 
 # Manually disconnect
 (x/disconnect)

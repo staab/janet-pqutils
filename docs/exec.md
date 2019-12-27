@@ -2,8 +2,6 @@
 
 This is the primary interface for running queries against postgres. In general, it manages your connection by placing it into a single `:pg/global-conn` dynamic binding.
 
-For convenience, everything in this namespace that accepts a query string also accepts a Result.
-
 ## Connection
 
 **`get-connection -> Connection`**
@@ -86,11 +84,15 @@ For example, you can easily add jsonb support to janet-pg:
 (defcast :jsonb json/decode)
 ```
 
-**`defunpack : keyword ({keyword any} -> nil) -> nil`**
+## Options
 
-Defines a function for post-processing a result row.
+For convenience, everything in this namespace that accepts a query string also accepts a Result, and an optional map of options.
 
-The purpose of unpacking is to convert sql results to something more apropos to your application in a way that is not determined by type alone, without having to re-iterate over the results. In most cases, you're better off doing this kind of thing in sql since you can take advantage of postgres' features (views, window functions, computations in non-select clauses).
+**`unpack : {keyword any} -> nil`**
+
+A function that takes a row and mutates it to implement post-processing logic.
+
+The purpose of this is to convert sql results to something more apropos to your application in a way that is not determined by type alone, without having to re-iterate over the results. In most cases, you're better off doing this kind of thing in sql since you can take advantage of postgres' features (views, window functions, computations in non-select clauses).
 
 However, there are times when this might be useful, like when merging another data source with your postgres results. Suppose you had a redis datastore that contained rate limit information for an api key, but your key data is stored in postgres. You might do something like the following:
 
@@ -98,15 +100,13 @@ However, there are times when this might be useful, like when merging another da
 # Define an unpacker that merges in information about how much capacity has been used
 # and whether the api key should be rate limited by using the id from postgres to
 # retrieve up to date information from redis.
-(defunpack
-  :api-key/rate-limit-info
-  (fn [row]
-    (let [{:capacity cap :id id} row
-          used (get-capacity-used id)]
-      (put row :capacity-used used)
-      (put row :rate-limited? (> used cap)))))
+(defn unpack-rate-limit-info [row]
+  (let [{:capacity cap :id id} row
+        used (get-capacity-used id)]
+    (put row :capacity-used used)
+    (put row :rate-limited? (> used cap))))
 
 # Use it by selecting the id and capacity, and passing :api-key/rate-limit-info as an unpacker.
 # This might yield something like {:id 1 :capacity 100 :capacity-used 30 :rate-limited? false}
-(one "select id, capacity from api_key" {:unpack [:api-key/rate-limit-info]})
+(one "select id, capacity from api_key" {:unpack unpack-rate-limit-info})
 ```

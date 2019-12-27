@@ -47,52 +47,42 @@
 (defn cast [oid x]
   ((get casters oid identity) x))
 
-(def- unpackers @{})
-
-(defn defunpack
-  "Defines an unpacker function for a dispatch value. When unpacking results,
-   the function is used to collect the value from the resulting row, so it should
-   take a key and a row, rather than the value at that location. Example:
-
-   (defunpack :a+b |(+ ($ :a) ($ :b)))
-   (unpack {:a 2 :b 1} {:unpack [:a+b]}) # => {:a+b 3 :a 2 :b 1}"
-  [k f]
-  (put unpackers k f))
-
 (defn nth [q i &opt opts]
-  (def r (exec q))
+  (def unpack (get opts :unpack nil))
+  (def result (exec q))
   (def row @{})
-  (each {:name k :oid oid :value v} (core/collect-row-meta r i)
-    (put row k (cast oid v)))
-  (each k (get opts :unpack [])
-    ((unpackers k) row))
+  (def meta (core/collect-row-meta result i))
+  # Populate the row, casting sql types to janet types
+  (each {:name k :oid oid :value v} meta (put row k (cast oid v)))
+  # Allow caller to post-process each row while it's still mutable
+  (when unpack (unpack row))
   row)
 
-(defn iter [q &opt ns]
+(defn iter [q &opt opts]
   (def r (exec q))
   (loop [i :range [0 (count r)]]
-    (yield (nth r i ns))))
+    (yield (nth r i opts))))
 
-(defn generator [q &opt ns]
-  (fiber/new |(iter q ns) :iy))
+(defn generator [q &opt opts]
+  (fiber/new |(iter q opts) :iy))
 
-(defn one [q &opt ns]
+(defn one [q &opt opts]
   (def r (exec q))
   (when (> (count r) 0)
-    (nth r 0 ns)))
+    (nth r 0 opts)))
 
-(defn scalar [q &opt ns]
-  (if-let [row (one q ns)] (first (values row))))
+(defn scalar [q &opt opts]
+  (if-let [row (one q opts)] (first (values row))))
 
-(defn col [q k &opt ns]
+(defn col [q k &opt opts]
   (def results @[])
-  (loop [row :generate (generator q ns)]
+  (loop [row :generate (generator q opts)]
     (array/push results (row k)))
   results)
 
-(defn all [q &opt ns]
+(defn all [q &opt opts]
   (def results @[])
-  (loop [row :generate (generator q ns)]
+  (loop [row :generate (generator q opts)]
     (array/push results row))
   results)
 
