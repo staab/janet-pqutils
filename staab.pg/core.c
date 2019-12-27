@@ -358,15 +358,33 @@ static Janet cfun_escape_identifier(int32_t argc, Janet *argv) {
 }
 
 static const JanetReg cfuns[] = {
-    {"connect", cfun_connect, "(pg/connect)\n\nReturns a postgresql connection."},
-    {"disconnect", cfun_disconnect, "(pg/disconnect)\n\nCloses a postgresql connection"},
-    {"exec", cfun_exec, "(pg/exec)\n\nExecutes a query with optional parameters"},
-    {"collect-count", cfun_collect_count, "(pg/collect-count)\n\nReturns the number of rows for a query result"},
-    {"collect-row", cfun_collect_row, "(pg/collect-row)\n\nCollects a single result of a query"},
-    {"collect-all", cfun_collect_all, "(pg/collect-all)\n\nCollects all results of a query"},
-    {"collect-row-meta", cfun_collect_row_meta, "(pg/collect-row-meta)\n\nCollects full metadata for a result row"},
-    {"escape-literal", cfun_escape_literal, "(pg/escape-literal)\n\nEscapes a literal string"},
-    {"escape-identifier", cfun_escape_identifier, "(pg/escape-identifier)\n\nEscapes an identifier"},
+    {"connect", cfun_connect,
+        "(pg/connect connection-string)\n\nReturns a postgresql connection."
+     },
+    {"disconnect", cfun_disconnect,
+        "(pg/disconnect connection)\n\nCloses a postgresql connection"
+     },
+    {"exec", cfun_exec,
+        "(pg/exec connection query)\n\nExecutes a query with optional parameters"
+     },
+    {"collect-count", cfun_collect_count,
+        "(pg/collect-count result)\n\nReturns the number of rows for a query result"
+     },
+    {"collect-row", cfun_collect_row,
+        "(pg/collect-row result n)\n\nReturns the nth result of a query."
+     },
+    {"collect-all", cfun_collect_all,
+        "(pg/collect-all result)\n\nReturns all results of a query"
+     },
+    {"collect-row-meta", cfun_collect_row_meta,
+        "(pg/collect-row-meta result n)\n\nReturns metadata for a result row"
+     },
+    {"escape-literal", cfun_escape_literal,
+        "(pg/escape-literal s)\n\nEscapes a literal string"
+     },
+    {"escape-identifier", cfun_escape_identifier,
+        "(pg/escape-identifier s)\n\nEscapes an identifier"
+     },
     {NULL, NULL, NULL}
 };
 
