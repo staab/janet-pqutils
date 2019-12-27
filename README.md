@@ -44,13 +44,6 @@ To get started, check out the example program below:
 # Returns @{"x" 1}
 (x/scalar "select jsonb_build_object('x', 1)")
 
-# Post-process results by type and by custom row unpacking function
-(x/defcast :integer inc)
-(defn unpack $(update row :x inc))
-
-# Returns {:x 3 :y 2}, per above casting/unpacking logic.
-(x/one "select 1 as x, 1 as y" {:unpack unpack})
-
 # Manually disconnect
 (x/disconnect)
 ```
