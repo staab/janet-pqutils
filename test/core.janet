@@ -46,4 +46,8 @@
    :caught
    (try
     (exec c "select 1")
-    ([e] (assert= e "no connection to the server\n") :caught))))
+    ([e]
+     (assert
+      (or (= e "connection not open\n") (= e "no connection to the server\n"))
+      "Connection should be closed")
+     :caught))))

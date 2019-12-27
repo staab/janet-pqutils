@@ -76,8 +76,8 @@
 # Test that stuff gets unpacked/casted properly
 
 (x/defcast :integer inc)
-(x/defunpack :a/x (fn [k row] (inc (row k))))
-(x/defunpack :a/z (fn [_ row] (+ (row :x) (row :y))))
+(x/defunpack :x (fn [row] (update row :x inc)))
+(x/defunpack :z (fn [row] (put row :z (+ (row :x) (row :y)))))
 
-(assert= {:x 3 :y 2 :z 5} (->immut (x/one "select 1 as x, 1 as y" :a)))
+(assert= {:x 3 :y 2 :z 5} (->immut (x/one "select 1 as x, 1 as y" {:unpack [:x :z]})))
 

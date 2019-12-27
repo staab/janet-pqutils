@@ -50,27 +50,22 @@
 (def- unpackers @{})
 
 (defn defunpack
-  "Defines an unpacker function based on a namespace (usually a table name)
-   and a key within that namespace (usually a column name). The dispatch value
-   should be a namespaced keyword, e.g., :namespace/key. When unpacking results,
+  "Defines an unpacker function for a dispatch value. When unpacking results,
    the function is used to collect the value from the resulting row, so it should
    take a key and a row, rather than the value at that location. Example:
 
-   (defunpack :my-table/my-col (fn [k row] (+ (row :other-col) (row k))))
-   (unpack :my-table {:my-col 2 :other-col 1}) # => {:my-col 3 :other-col 1}"
-  [dv f]
-  (def [ns k] (map keyword (string/split "/" dv)))
-  (when (nil? (unpackers ns)) (put unpackers ns @{}))
-  (put (unpackers ns) k f))
+   (defunpack :a+b |(+ ($ :a) ($ :b)))
+   (unpack {:a 2 :b 1} {:unpack [:a+b]}) # => {:a+b 3 :a 2 :b 1}"
+  [k f]
+  (put unpackers k f))
 
-(defn nth [q i &opt ns]
+(defn nth [q i &opt opts]
   (def r (exec q))
   (def row @{})
   (each {:name k :oid oid :value v} (core/collect-row-meta r i)
     (put row k (cast oid v)))
-  (def ns-unpackers (get unpackers ns {}))
-  (each k (keys ns-unpackers)
-    (put row k ((ns-unpackers k) k row)))
+  (each k (get opts :unpack [])
+    ((unpackers k) row))
   row)
 
 (defn iter [q &opt ns]

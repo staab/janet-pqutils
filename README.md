@@ -38,13 +38,20 @@ To get started, check out the example program below:
   # Everything in exec supports this overloading.
   (when (>= (x/count res) 10) (x/nth res 9)))
 
-# Add rules to cast/unpack results from certain tables
-(x/defcast :integer inc)
-(x/defunpack :a/x (fn [k row] (inc (row k))))
-(x/defunpack :a/z (fn [_ row] (+ (row :x) (row :y))))
+# Add rules to cast sql values to janet values
+(x/defcast :json json/decode)
+(x/defcast :jsonb json/decode)
 
-# Returns {:x 3 :y 2 :z 5}, per above unpack rules
-(x/one "select 1 as x, 1 as y" :a)
+# Returns @{"x" 1}
+(x/scalar "select jsonb_build_object('x', 1)")
+
+# Add rules to post-process results from certain tables. Read
+# more about how this works at docs/exec.md.
+(x/defcast :integer inc)
+(x/defunpack :increment-x (fn [row] (update row :x inc)))
+
+# Returns {:x 3 :y 2}, per above unpack rules.
+(x/one "select 1 as x, 1 as y" {:unpack [:increment-x]})
 
 # Manually disconnect
 (x/disconnect)
