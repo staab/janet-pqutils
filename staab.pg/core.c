@@ -98,8 +98,6 @@ static Janet cfun_disconnect(int32_t argc, Janet *argv) {
 typedef struct {
     Connection* connection;
     PGresult* handle;
-    int n_tuples;
-    int n_fields;
 } Result;
 
 static int result_gc(void *p, size_t size) {
@@ -132,7 +130,7 @@ static struct JanetAbstractType Result_jt = {
 };
 
 void populate_oids(Result* result) {
-    for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
+    for (int col_idx = 0; col_idx < PQnfields(result->handle); col_idx++) {
         int oid = PQftype(result->handle, col_idx);
         Janet match = janet_table_get(result->connection->oids, janet_wrap_integer(oid));
 
@@ -241,8 +239,6 @@ static Janet cfun_exec(int32_t argc, Janet *argv) {
     Result *result = janet_abstract(&Result_jt, sizeof(Result));
     result->connection = connection;
     result->handle = pgres;
-    result->n_tuples = PQntuples(pgres);
-    result->n_fields = PQnfields(pgres);
 
     populate_oids(result);
 
@@ -254,70 +250,24 @@ static Janet cfun_collect_count(int32_t argc, Janet *argv) {
 
     Result* result = janet_getabstract(argv, 0, &Result_jt);
 
-    return janet_wrap_integer(result->n_tuples);
+    return janet_wrap_integer(PQntuples(result->handle));
 }
 
-static Janet cfun_collect_row(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
-
-    Result* result = janet_getabstract(argv, 0, &Result_jt);
-    int row_idx = janet_getinteger(argv, 1);
-
-    if (row_idx < 0 || row_idx > result->n_tuples) {
-        janet_panic("Row index is out of bounds");
-    }
-
-    JanetTable *row = janet_table(result->n_fields);
-
-    for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
-        char* k = PQfname(result->handle, col_idx);
-        Janet v = result_get_value(result, row_idx, col_idx);
-
-        janet_table_put(row, janet_ckeywordv(k), v);
-    }
-
-    return janet_wrap_table(row);
-}
-
-static Janet cfun_collect_all(int32_t argc, Janet *argv) {
+static Janet cfun_collect_row_meta(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 1);
 
     Result* result = janet_getabstract(argv, 0, &Result_jt);
 
-    JanetArray* rows = janet_array(result->n_tuples);
-
-    for (int row_idx = 0; row_idx < result->n_tuples; row_idx++) {
-        JanetTable *row = janet_table(result->n_fields);
-
-        for (int32_t col_idx = 0; col_idx < result->n_fields; col_idx++) {
-            char* k = PQfname(result->handle, col_idx);
-            Janet v = result_get_value(result, row_idx, col_idx);
-
-            janet_table_put(row, janet_ckeywordv(k), v);
-        }
-
-        janet_array_push(rows, janet_wrap_table(row));
+    if (PQntuples(result->handle) == 0) {
+        janet_panic("No rows returned");
     }
 
-    return janet_wrap_array(rows);
-}
+    JanetArray *row = janet_array(PQnfields(result->handle));
 
-static Janet cfun_collect_row_meta(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
-
-    Result* result = janet_getabstract(argv, 0, &Result_jt);
-    int row_idx = janet_getinteger(argv, 1);
-
-    if (row_idx < 0 || row_idx > result->n_tuples) {
-        janet_panic("Row index is out of bounds");
-    }
-
-    JanetArray *row = janet_array(result->n_fields);
-
-    for (int col_idx = 0; col_idx < result->n_fields; col_idx++) {
+    for (int col_idx = 0; col_idx < PQnfields(result->handle); col_idx++) {
         char* oid = (char*)janet_unwrap_string(result_get_oid(result, col_idx));
         char* name = PQfname(result->handle, col_idx);
-        Janet value = result_get_value(result, row_idx, col_idx);
+        Janet value = result_get_value(result, 0, col_idx);
 
         JanetTable* cell = janet_table(3);
         janet_table_put(cell, janet_ckeywordv("oid"), janet_ckeywordv(oid));
@@ -330,6 +280,29 @@ static Janet cfun_collect_row_meta(int32_t argc, Janet *argv) {
     return janet_wrap_array(row);
 }
 
+
+static Janet cfun_collect_all(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 1);
+
+    Result* result = janet_getabstract(argv, 0, &Result_jt);
+
+    JanetArray* rows = janet_array(PQntuples(result->handle));
+
+    for (int row_idx = 0; row_idx < PQntuples(result->handle); row_idx++) {
+        JanetTable *row = janet_table(PQnfields(result->handle));
+
+        for (int32_t col_idx = 0; col_idx < PQnfields(result->handle); col_idx++) {
+            char* k = PQfname(result->handle, col_idx);
+            Janet v = result_get_value(result, row_idx, col_idx);
+
+            janet_table_put(row, janet_ckeywordv(k), v);
+        }
+
+        janet_array_push(rows, janet_wrap_table(row));
+    }
+
+    return janet_wrap_array(rows);
+}
 
 static Janet cfun_escape_literal(int32_t argc, Janet *argv) {
     janet_fixarity(argc, 2);
@@ -370,14 +343,11 @@ static const JanetReg cfuns[] = {
     {"collect-count", cfun_collect_count,
         "(pg/collect-count result)\n\nReturns the number of rows for a query result"
      },
-    {"collect-row", cfun_collect_row,
-        "(pg/collect-row result n)\n\nReturns the nth result of a query."
+    {"collect-row-meta", cfun_collect_row_meta,
+        "(pg/collect-row-meta result n)\n\nReturns an annotated result row"
      },
     {"collect-all", cfun_collect_all,
         "(pg/collect-all result)\n\nReturns all results of a query"
-     },
-    {"collect-row-meta", cfun_collect_row_meta,
-        "(pg/collect-row-meta result n)\n\nReturns metadata for a result row"
      },
     {"escape-literal", cfun_escape_literal,
         "(pg/escape-literal s)\n\nEscapes a literal string"

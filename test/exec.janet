@@ -39,9 +39,19 @@
   [{:tablename :pg_auth_members :int 1 :float 1.2 :false false :true true :nil nil}
    {:tablename :pg_authid :int 2 :float 1.2 :false false :true true :nil nil}])
 
+(assert=
+ :caught
+ (try
+  (resume (x/generator text-query))
+  ([e]
+   (assert= e "ERROR:  DECLARE CURSOR can only be used in transaction blocks\n")
+   :caught)))
+
 (let [result @[]]
+  (x/exec "BEGIN")
   (loop [row :generate (x/generator text-query)]
     (array/push result row))
+  (x/exec "COMMIT")
   (assert= text-query-result (->immut result)))
 
 # Everything should work on both a string and a result as input
@@ -51,12 +61,6 @@
 
 (assert= text-query-result (->immut (x/all text-query)))
 (assert= text-query-result (->immut (x/all (x/exec text-query))))
-
-(assert= (get text-query-result 1) (->immut (x/nth text-query 1)))
-(assert= (get text-query-result 1) (->immut (x/nth (x/exec text-query) 1)))
-
-(assert-err (x/nth text-query 10))
-(assert-err (x/nth (x/exec text-query) 10))
 
 (assert= (first text-query-result) (->immut (x/one text-query)))
 (assert= (first text-query-result) (->immut (x/one (x/exec text-query))))

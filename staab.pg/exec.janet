@@ -27,6 +27,8 @@
 
 (defn identifier [s] (core/escape-identifier (get-connection) (string s)))
 
+(defn composite [& s] (string/join (map string s) " "))
+
 (defn exec
   "Takes a string and executes it with the current connection, returing
    a result. If a result is passed instead, it passes the result through.
@@ -47,42 +49,43 @@
 (defn cast [oid x]
   ((get casters oid identity) x))
 
-(defn nth [q i &opt opts]
-  (def unpack (get opts :unpack nil))
-  (def result (exec q))
-  (def row @{})
-  (def meta (core/collect-row-meta result i))
-  # Populate the row, casting sql types to janet types
-  (each {:name k :oid oid :value v} meta (put row k (cast oid v)))
+(defn post-process [meta row &opt opts]
+  # Cast sql types to janet types
+  (each {:name k :oid oid} meta (update row k |(cast oid $)))
   # Allow caller to post-process each row while it's still mutable
-  (when unpack (unpack row))
+  ((get opts :unpack identity) row)
   row)
 
-(defn iter [q &opt opts]
+(defn all [q &opt opts]
   (def r (exec q))
-  (loop [i :range [0 (count r)]]
-    (yield (nth r i opts))))
-
-(defn generator [q &opt opts]
-  (fiber/new |(iter q opts) :iy))
+  (def m (core/collect-row-meta r))
+  (map |(post-process m $ opts) (core/collect-all r)))
 
 (defn one [q &opt opts]
   (def r (exec q))
   (when (> (count r) 0)
-    (nth r 0 opts)))
+    (let [m (core/collect-row-meta r)
+          row (first (core/collect-all r))]
+      (post-process m row opts))))
 
 (defn scalar [q &opt opts]
-  (if-let [row (one q opts)] (first (values row))))
+  (if-let [row (one q opts)]
+    (first (values row))))
 
-(defn col [q k &opt opts]
-  (def results @[])
-  (loop [row :generate (generator q opts)]
-    (array/push results (row k)))
-  results)
+(defn col [q &opt opts]
+  (map |(first (values $)) (all q opts)))
 
-(defn all [q &opt opts]
-  (def results @[])
-  (loop [row :generate (generator q opts)]
-    (array/push results row))
-  results)
+(defn iter [q &opt opts]
+  (let [chunk-size (get opts :chunk-size 100)
+        cur (identifier (gensym))]
+    (var done? false)
+    (exec (composite "DECLARE" cur "CURSOR FOR" q))
+    (while (not done?)
+      (let [q (composite "FETCH FORWARD" chunk-size cur)]
+        (try
+         (each row (all q) (yield row))
+         ([e] (set done? true)))))
+    (exec (composite "CLOSE" cur))))
 
+(defn generator [q &opt opts]
+  (fiber/new |(iter q opts) :iy))

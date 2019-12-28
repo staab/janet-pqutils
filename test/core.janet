@@ -20,10 +20,7 @@
       result (exec c (string/join query " "))]
   (assert=
    {:oid :name :value :pg_authid :name :tablename}
-   (->immut (first (collect-row-meta result 0))))
-  (assert=
-   {:tablename :pg_authid :schemaname :pg_catalog}
-   (->immut (collect-row result 0)))
+   (->immut (first (collect-row-meta result))))
   (assert=
    [{:tablename :pg_authid :schemaname :pg_catalog}
     {:tablename :pg_auth_members :schemaname :pg_catalog}]
@@ -32,10 +29,10 @@
 # Make sure various data types are coerced properly
 
 (let [c (connect "dbname = postgres")]
-  (assert= {:x 1} (->immut (collect-row (exec c "select 1 as x") 0)))
-  (assert= {:x 1.1} (->immut (collect-row (exec c "select 1.1 as x") 0)))
-  (assert= {:x true} (->immut (collect-row (exec c "select true as x") 0)))
-  (assert= {:x false} (->immut (collect-row (exec c "select false as x") 0))))
+  (assert= {:x 1} (->immut (first (collect-all (exec c "select 1 as x")))))
+  (assert= {:x 1.1} (->immut (first (collect-all (exec c "select 1.1 as x")))))
+  (assert= {:x true} (->immut (first (collect-all (exec c "select true as x")))))
+  (assert= {:x false} (->immut (first (collect-all (exec c "select false as x"))))))
 
 # Closed connections should throw appropriate errors
 
