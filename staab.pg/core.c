@@ -198,9 +198,9 @@ static Janet result_get_value(Result *result, int row_idx, int col_idx) {
         janet_cstrcmp(oid_str, "bigint") == 0 ||
         janet_cstrcmp(oid_str, "bigserial") == 0
     ) {
-        uint64_t uint64;
-        janet_scan_uint64((const uint8_t*)v, strlen(v), &uint64);
-        return janet_wrap_u64(uint64);
+        int64_t int64;
+        janet_scan_int64((const uint8_t*)v, strlen(v), &int64);
+        return janet_wrap_s64(int64);
     }
 
     if (janet_cstrcmp(oid_str, "boolean") == 0) {
