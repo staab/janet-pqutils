@@ -29,15 +29,42 @@
 (def text-query
   (string/join
    ["select" (x/identifier :tablename) ","
-    "rank() over (order by tablename) as int, 1.2 as float,"
+    "(rank() over (order by tablename))::numeric as int, 1.2 as float,"
     "false as false, true as true, null as nil"
     "from" (x/identifier :pg_tables)
     "where" (x/identifier :tablename) "like" (x/literal "pg_auth%")]
    " "))
 
 (def text-query-result
-  [{:tablename :pg_auth_members :int 1 :float 1.2 :false false :true true :nil nil}
-   {:tablename :pg_authid :int 2 :float 1.2 :false false :true true :nil nil}])
+  [{:tablename :pg_auth_members :int 1 :float 1.2
+    :false false :true true :nil nil}
+   {:tablename :pg_authid :int 2 :float 1.2
+    :false false :true true :nil nil}])
+
+# Everything should work on both a string and a result as input
+
+(assert= 2 (x/count text-query))
+(assert= 2 (x/count (x/exec text-query)))
+
+(assert= (first text-query-result) (->immut (x/one text-query)))
+(assert= (first text-query-result) (->immut (x/one (x/exec text-query))))
+
+(assert= text-query-result (->immut (x/all text-query)))
+(assert= text-query-result (->immut (x/all (x/exec text-query))))
+
+(assert= nil (->immut (x/one "select 1 where false = true")))
+(assert= nil (->immut (x/one (x/exec "select 1 where false = true"))))
+
+(assert= 3 (x/scalar "select 3"))
+(assert= 3 (x/scalar (x/exec "select 3")))
+
+(assert= nil (x/scalar "select 3 where false = true"))
+(assert= nil (x/scalar (x/exec "select 3 where false = true")))
+
+(assert= [1 2] (->immut (x/col text-query :int)))
+(assert= [1 2] (->immut (x/col (x/exec text-query) :int)))
+
+# Test iteration
 
 (assert=
  :caught
@@ -53,29 +80,6 @@
     (array/push result row))
   (x/exec "COMMIT")
   (assert= text-query-result (->immut result)))
-
-# Everything should work on both a string and a result as input
-
-(assert= 2 (x/count text-query))
-(assert= 2 (x/count (x/exec text-query)))
-
-(assert= text-query-result (->immut (x/all text-query)))
-(assert= text-query-result (->immut (x/all (x/exec text-query))))
-
-(assert= (first text-query-result) (->immut (x/one text-query)))
-(assert= (first text-query-result) (->immut (x/one (x/exec text-query))))
-
-(assert= nil (->immut (x/one "select 1 where false = true")))
-(assert= nil (->immut (x/one (x/exec "select 1 where false = true"))))
-
-(assert= 3 (x/scalar "select 3"))
-(assert= 3 (x/scalar (x/exec "select 3")))
-
-(assert= nil (x/scalar "select 3 where false = true"))
-(assert= nil (x/scalar (x/exec "select 3 where false = true")))
-
-(assert= [1 2] (->immut (x/col text-query :int)))
-(assert= [1 2] (->immut (x/col (x/exec text-query) :int)))
 
 # Test that stuff gets unpacked/casted properly
 

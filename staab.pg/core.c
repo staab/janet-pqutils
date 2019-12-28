@@ -183,8 +183,6 @@ static Janet result_get_value(Result *result, int row_idx, int col_idx) {
     if (
         janet_cstrcmp(oid_str, "integer") == 0     ||
         janet_cstrcmp(oid_str, "numeric") == 0     ||
-        janet_cstrcmp(oid_str, "bigserial") == 0   ||
-        janet_cstrcmp(oid_str, "bigint") == 0      ||
         janet_cstrcmp(oid_str, "double") == 0      ||
         janet_cstrcmp(oid_str, "real") == 0        ||
         janet_cstrcmp(oid_str, "smallint") == 0    ||
@@ -194,6 +192,15 @@ static Janet result_get_value(Result *result, int row_idx, int col_idx) {
         double number;
         janet_scan_number((const uint8_t*)v, strlen(v), &number);
         return janet_wrap_number(number);
+    }
+
+    if (
+        janet_cstrcmp(oid_str, "bigint") == 0 ||
+        janet_cstrcmp(oid_str, "bigserial") == 0
+    ) {
+        uint64_t uint64;
+        janet_scan_uint64((const uint8_t*)v, strlen(v), &uint64);
+        return janet_wrap_u64(uint64);
     }
 
     if (janet_cstrcmp(oid_str, "boolean") == 0) {
