@@ -64,6 +64,7 @@ static Janet cfun_connect(int32_t argc, Janet *argv) {
     PGconn *handle = PQconnectdb((char *)info);
 
     if (PQstatus(handle) != CONNECTION_OK) {
+        PQfinish(handle);
         janet_panicf("Connection to database failed: %s", PQerrorMessage(handle));
     }
 
@@ -71,6 +72,7 @@ static Janet cfun_connect(int32_t argc, Janet *argv) {
     PGresult *res = PQexec(handle, "SELECT pg_catalog.set_config('search_path', '', false)");
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
         PQclear(res);
+        PQfinish(handle);
         janet_panicf("SET failed: %s", PQerrorMessage(handle));
     } else {
         PQclear(res);
