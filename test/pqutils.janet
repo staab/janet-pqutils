@@ -1,6 +1,5 @@
 (use staab.assert/assert)
-(use pg)
-(use ./util)
+(use pqutils)
 
 (def test-info "dbname = postgres")
 
