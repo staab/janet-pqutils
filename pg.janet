@@ -1,4 +1,4 @@
-(import build/core :as core)
+(import _pg)
 
 (defn get-connection []
   (let [conn (dyn :pg/global-conn)]
@@ -9,23 +9,23 @@
 (defn connect [info &opt opts]
   (default opts {})
   (let [{:no-global no-global?} opts
-        conn (core/connect info)]
+        conn (_pg/connect info)]
     (if no-global? conn (setdyn :pg/global-conn conn))))
 
 (defmacro with-connection [connection & body]
   ~(with-dyns [:pg/global-conn ,;connection] ,;body))
 
 (defmacro with-connect [info & body]
-  ~(with-dyns [:pg/global-conn (,core/connect ,;info)] ,;body))
+  ~(with-dyns [:pg/global-conn (,_pg/connect ,;info)] ,;body))
 
 (defn disconnect []
   (if-let [conn (dyn :pg/global-conn)]
-    (core/disconnect conn))
+    (_pg/disconnect conn))
   (setdyn :pg/global-conn nil))
 
-(defn literal [s] (core/escape-literal (get-connection) (string s)))
+(defn literal [s] (_pg/escape-literal (get-connection) (string s)))
 
-(defn identifier [s] (core/escape-identifier (get-connection) (string s)))
+(defn identifier [s] (_pg/escape-identifier (get-connection) (string s)))
 
 (defn composite [& s] (string/join (map string s) " "))
 
@@ -34,9 +34,9 @@
    a result. If a result is passed instead, it passes the result through.
    This allows passing a result wherever you would otherwise pass a string
    and re-use most of the query execution api."
-  [q] (if (= :pg/result (type q)) q (core/exec (get-connection) q)))
+  [q] (if (= :pg/result (type q)) q (_pg/exec (get-connection) q)))
 
-(defn count [q] (core/collect-count (exec q)))
+(defn count [q] (_pg/collect-count (exec q)))
 
 (def- casters @{})
 
@@ -58,14 +58,14 @@
 
 (defn all [q &opt opts]
   (def r (exec q))
-  (def m (core/collect-row-meta r))
-  (map |(post-process m $ opts) (core/collect-all r)))
+  (def m (_pg/collect-row-meta r))
+  (map |(post-process m $ opts) (_pg/collect-all r)))
 
 (defn one [q &opt opts]
   (def r (exec q))
   (when (> (count r) 0)
-    (let [m (core/collect-row-meta r)
-          row (first (core/collect-all r))]
+    (let [m (_pg/collect-row-meta r)
+          row (first (_pg/collect-all r))]
       (post-process m row opts))))
 
 (defn scalar [q &opt opts]

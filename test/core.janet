@@ -1,5 +1,5 @@
-(use build/core)
 (use staab.assert/assert)
+(use _pg)
 (use ./util)
 
 # String representations and escapings should work

@@ -22,10 +22,10 @@
  :dependencies ["https://github.com/staab/janet-assert.git"])
 
 (declare-native
- :name "core"
- :source @["staab.pg/core.c"]
+ :name "_pg"
+ :source @["_pg.c"]
  :lflags lflags
  :cflags cflags)
 
 (declare-source
-  :source ["staab.pg"])
+  :source ["pg.janet"])
