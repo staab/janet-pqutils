@@ -5,26 +5,26 @@
 (def test-info "dbname = postgres")
 
 # Connection dyn var is required when doing anything. Connecting
-# sets the connection to pg/connection by default
+# sets the connection to pq.context by default
 
-(assert= :pg/connection (type (connect test-info {:no-global true})))
+(assert= :pq.context (type (connect test-info {:no-global true})))
 (assert-err (get-connection))
-(assert= :pg/connection (type (connect test-info)))
-(assert= :pg/connection (type (get-connection)))
+(assert= :pq.context (type (connect test-info)))
+(assert= :pq.context (type (get-connection)))
 (disconnect)
 (assert-err (get-connection))
 (with-connection [(connect test-info {:no-global true})]
-  (assert= :pg/connection (type (get-connection))))
+  (assert= :pq.context (type (get-connection))))
 (assert-err (get-connection))
 (with-connect [test-info]
-  (assert= :pg/connection (type (get-connection))))
+  (assert= :pq.context (type (get-connection))))
 (assert-err (get-connection))
 
 # Query functions
 
 (connect test-info)
 
-(assert= :pg/result (type (exec "select 1")))
+(assert= :pq.result (type (exec "select 1")))
 
 (def text-query
   (string/join
@@ -46,14 +46,14 @@
 (assert= 2 (count text-query))
 (assert= 2 (count (exec text-query)))
 
-(assert= (first text-query-result) (->immut (one text-query)))
-(assert= (first text-query-result) (->immut (one (exec text-query))))
+(assert= (first text-query-result) (-> (one text-query)))
+(assert= (first text-query-result) (one (exec text-query)))
 
-(assert= text-query-result (->immut (all text-query)))
-(assert= text-query-result (->immut (all (exec text-query))))
+(assert= text-query-result (all text-query))
+(assert= text-query-result (all (exec text-query)))
 
-(assert= nil (->immut (one "select 1 where false = true")))
-(assert= nil (->immut (one (exec "select 1 where false = true"))))
+(assert= nil (one "select 1 where false = true"))
+(assert= nil (one (exec "select 1 where false = true")))
 
 (assert= 3 (scalar "select 3"))
 (assert= 3 (scalar (exec "select 3")))
@@ -61,8 +61,8 @@
 (assert= nil (scalar "select 3 where false = true"))
 (assert= nil (scalar (exec "select 3 where false = true")))
 
-(assert= [1 2] (->immut (col text-query :int)))
-(assert= [1 2] (->immut (col (exec text-query) :int)))
+(assert= [1 2] (col text-query :int))
+(assert= [1 2] (col (exec text-query) :int))
 
 # Test iteration
 
@@ -79,7 +79,7 @@
   (loop [row :generate (generator text-query)]
     (array/push result row))
   (exec "COMMIT")
-  (assert= text-query-result (->immut result)))
+  (assert= text-query-result result))
 
 # Test that stuff gets unpacked/casted properly
 
@@ -89,5 +89,5 @@
   (update row :x inc)
   (put row :z (+ (row :x) (row :y))))
 
-(assert= {:x 3 :y 2 :z 5} (->immut (one "select 1 as x, 1 as y" {:unpack unpack})))
+(assert= {:x 3 :y 2 :z 5} (one "select 1 as x, 1 as y" {:unpack unpack}))
 
