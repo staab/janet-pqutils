@@ -13,22 +13,25 @@
       (error "dyn :pqutils/global-conn is not a connection object"))
     conn))
 
+(defn disconnect []
+  (if-let [conn (dyn :pqutils/global-conn)]
+    (pq/close conn))
+  (setdyn :pqutils/global-conn nil))
+
 (defn connect [info &opt opts]
   (default opts {})
   (let [{:no-global no-global?} opts
         conn (pq/connect info)]
-    (if no-global? conn (setdyn :pqutils/global-conn conn))))
+    (when (not no-global?)
+      (disconnect)
+      (setdyn :pqutils/global-conn conn))
+    conn))
 
 (defmacro with-connection [connection & body]
   ~(with-dyns [:pqutils/global-conn ,;connection] ,;body))
 
 (defmacro with-connect [info & body]
   ~(with-dyns [:pqutils/global-conn (,pq/connect ,;info)] ,;body))
-
-(defn disconnect []
-  (if-let [conn (dyn :pqutils/global-conn)]
-    (pq/close conn))
-  (setdyn :pqutils/global-conn nil))
 
 (defn literal [s] (pq/escape-literal (get-connection) (string s)))
 
