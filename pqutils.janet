@@ -1,11 +1,13 @@
 (import _pq)
 (import pq)
+(import codec)
 
 (def *decoders* pq/*decoders*)
 (def json pq/json)
 (def jsonb pq/jsonb)
 
 (put *decoders* 19 keyword)
+(put *decoders* 1700 scan-number)
 
 (defn get-connection []
   (let [conn (dyn :pqutils/global-conn)]
@@ -33,7 +35,8 @@
 (defmacro with-connect [info & body]
   ~(with-dyns [:pqutils/global-conn (,pq/connect ,;info)] ,;body))
 
-(defn literal [s] (pq/escape-literal (get-connection) (string s)))
+(defn literal [s]
+  (if (number? s) s (pq/escape-literal (get-connection) (string s))))
 
 (defn identifier [s] (pq/escape-identifier (get-connection) (string s)))
 
@@ -45,16 +48,21 @@
    This allows passing a result wherever you would otherwise pass a string
    and re-use most of the query execution api."
   [query & params]
-  (if (= :pq.result (type query))
-    query
-    (_pq/exec (get-connection) query ;params)))
+  (def result (if (= :pq.result (type query))
+                query
+                (_pq/exec (get-connection) query ;params)))
+  (if (_pq/error? result) (error result) result))
 
 (defn count [& args] (pq/result-ntuples (exec ;args)))
 
+(defn- map-keys [f d]
+  (def ctor (if (= (type d) :table) table struct))
+  (ctor ;(mapcat (fn [[k v]] [(f k) v]) (pairs d))))
+
 (defn all [query & params]
-  (def result (exec query ;params))
-  (when (_pq/error? result) (error result))
-  (_pq/result-unpack result pq/*decoders*))
+  (map
+   |(map-keys keyword $)
+   (_pq/result-unpack (exec query ;params) pq/*decoders*)))
 
 (defn one [query & params]
   (def result (all query ;params))
@@ -68,16 +76,14 @@
   (map |(first (values $)) (all query ;params)))
 
 (defn iter [query &opt opts & params]
-  (let [chunk-size (get opts :chunk-size 100)
-        cur (identifier (gensym))]
+  (let [chunk-size (literal (get opts :chunk-size 100))
+        cur (identifier (codec/encode (string (os/cryptorand 10))))
+        get-chunk |(all (composite "FETCH FORWARD" chunk-size cur))]
     (var done? false)
     (exec (composite "DECLARE" cur "CURSOR FOR" query) ;params)
-    (while (not done?)
-      (try
-       (each row (all "FETCH FORWARD $1 $2" chunk-size cur)
-         (yield row))
-       ([e] (set done? true))))
-    (exec "CLOSE" cur)))
+    (loop [chunk :iterate (get-chunk) :until (empty? chunk)]
+      (each row chunk (yield row)))
+    (exec (composite "CLOSE" cur))))
 
 (defn generator [query &opt opts & params]
   (fiber/new |(iter query opts ;params) :iy))

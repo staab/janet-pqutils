@@ -1,6 +1,12 @@
 (use staab.assert/assert)
 (use pqutils)
 
+(defn ->immut [x]
+  (cond
+   (indexed? x) (tuple ;(map ->immut x))
+   (table? x) (struct ;(kvs x))
+   x))
+
 (def test-info "dbname = postgres")
 
 # Connection dyn var is required when doing anything. Connecting
@@ -45,11 +51,11 @@
 (assert= 2 (count text-query))
 (assert= 2 (count (exec text-query)))
 
-(assert= (first text-query-result) (-> (one text-query)))
-(assert= (first text-query-result) (one (exec text-query)))
+(assert= (first text-query-result) (->immut (-> (one text-query))))
+(assert= (first text-query-result) (->immut (one (exec text-query))))
 
-(assert= text-query-result (all text-query))
-(assert= text-query-result (all (exec text-query)))
+(assert= text-query-result (->immut (all text-query)))
+(assert= text-query-result (->immut (all (exec text-query))))
 
 (assert= nil (one "select 1 where false = true"))
 (assert= nil (one (exec "select 1 where false = true")))
@@ -60,8 +66,8 @@
 (assert= nil (scalar "select 3 where false = true"))
 (assert= nil (scalar (exec "select 3 where false = true")))
 
-(assert= [1 2] (col text-query :int))
-(assert= [1 2] (col (exec text-query) :int))
+(assert-deep= @["x" "y"] (col "select jsonb_array_elements_text(jsonb_build_array('x', 'y'))"))
+(assert-deep= @["x" "y"] (col (exec "select jsonb_array_elements_text(jsonb_build_array('x', 'y'))")))
 
 # Test iteration
 
@@ -70,7 +76,9 @@
  (try
   (resume (generator text-query))
   ([e]
-   (assert= e "ERROR:  DECLARE CURSOR can only be used in transaction blocks\n")
+   (assert=
+    (string e)
+    "PGResult: ERROR:  DECLARE CURSOR can only be used in transaction blocks\n")
    :caught)))
 
 (let [result @[]]
@@ -78,15 +86,4 @@
   (loop [row :generate (generator text-query)]
     (array/push result row))
   (exec "COMMIT")
-  (assert= text-query-result result))
-
-# Test that stuff gets unpacked/casted properly
-
-(defcast :integer inc)
-
-(defn unpack [row]
-  (update row :x inc)
-  (put row :z (+ (row :x) (row :y))))
-
-(assert= {:x 3 :y 2 :z 5} (one "select 1 as x, 1 as y" {:unpack unpack}))
-
+  (assert= text-query-result (->immut result)))
