@@ -8,9 +8,25 @@ A postgres utility library for Janet and [janet-pq](https://github.com/andrewcha
 # By default, connect sets the connection to a global dynamic binding
 (sql/connect "postgres://localhost:5432/mydb")
 
-# Lazily iterate over results. Parameters are always supported
-(loop [row :generate (sql/generator "select a, b from mytable where c > $1" 3)]
-  (pp (+ ;(values row))))
+# Use parameterized queries
+(def param-q "select a, b from mytable where c > $1")
+
+# Or dynamically constructed queries (identifiers and literals are escaped)
+(defn dyn-q [table col & where]
+  (sql/composite "select" (identifier col) "from" (identifier table) "where" ;where))
+
+(dyn-q "jim's coffee" :a (identifier :c) "=" (literal "starbuck's"))
+# => "select "jim's coffee" from "mytable" where "c" = 'starbuck''s'"
+
+# Retrieve all, one, a column, or a single value from results. Parameters are always supported.
+(sql/all param-q 2) # => [{:a 1 :b 2} {:a 2 :b 3}]
+(sql/one param-q 2) # => {:a 1 :b 2}
+(sql/col param-q 2) # => [1 2]
+(sql/scalar param-q 2) # => 1
+
+# Lazily iterate over results
+(loop [row :generate (sql/generator param-q 2)]
+  (pp (+ ;(values row)))) # => 3, 5
 
 # Temporarily use a different database, disconnecting when done
 (sql/with-connect ["postgres://localhost:5432/myotherdb"]
@@ -23,8 +39,8 @@ A postgres utility library for Janet and [janet-pq](https://github.com/andrewcha
   # like this, it's useful to pass a result rather than a query string.
   (when (>= (sql/count res) 10) (in (all res) 9)))
 
-# Returns @{"x" 1}
-(sql/scalar "select jsonb_build_object('x', 1)")
+# Handles json decoding (encoding has to be explicitly opted into)
+(sql/scalar "select jsonb_build_object('x', 1)") # => @{"x" 1}
 
 # Manually disconnect
 (sql/disconnect)
