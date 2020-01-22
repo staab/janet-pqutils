@@ -68,7 +68,7 @@
   (def result (all query ;params))
   (if (empty? result) nil (first result)))
 
-(defn one [query & params]
+(defn val [query & params]
   (if-let [r (row query ;params)]
     (first (values r))))
 

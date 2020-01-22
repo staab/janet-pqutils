@@ -22,7 +22,7 @@ A postgres utility library for Janet and [janet-pq](https://github.com/andrewcha
 (sql/all param-q 2) # => [{:a 1 :b 2} {:a 2 :b 3}]
 (sql/row param-q 2) # => {:a 1 :b 2}
 (sql/col param-q 2) # => [1 2]
-(sql/one param-q 2) # => 1
+(sql/val param-q 2) # => 1
 
 # Lazily iterate over results
 (loop [row :generate (sql/generator param-q 2)]
@@ -40,7 +40,7 @@ A postgres utility library for Janet and [janet-pq](https://github.com/andrewcha
   (when (>= (sql/count res) 10) (in (all res) 9)))
 
 # Handles json decoding (encoding has to be explicitly opted into)
-(sql/one "select jsonb_build_object('x', 1)") # => @{"x" 1}
+(sql/val "select jsonb_build_object('x', 1)") # => @{"x" 1}
 
 # Manually disconnect
 (sql/disconnect)

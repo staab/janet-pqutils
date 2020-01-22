@@ -60,11 +60,11 @@
 (assert= nil (row "select 1 where false = true"))
 (assert= nil (row (exec "select 1 where false = true")))
 
-(assert= 3 (one "select 3"))
-(assert= 3 (one (exec "select 3")))
+(assert= 3 (val "select 3"))
+(assert= 3 (val (exec "select 3")))
 
-(assert= nil (one "select 3 where false = true"))
-(assert= nil (one (exec "select 3 where false = true")))
+(assert= nil (val "select 3 where false = true"))
+(assert= nil (val (exec "select 3 where false = true")))
 
 (assert-deep= @["x" "y"] (col "select jsonb_array_elements_text(jsonb_build_array('x', 'y'))"))
 (assert-deep= @["x" "y"] (col (exec "select jsonb_array_elements_text(jsonb_build_array('x', 'y'))")))
@@ -87,3 +87,5 @@
     (array/push result row))
   (exec "COMMIT")
   (assert= text-query-result (->immut result)))
+
+(pp "Success")
