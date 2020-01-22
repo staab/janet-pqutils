@@ -51,20 +51,20 @@
 (assert= 2 (count text-query))
 (assert= 2 (count (exec text-query)))
 
-(assert= (first text-query-result) (->immut (-> (one text-query))))
-(assert= (first text-query-result) (->immut (one (exec text-query))))
+(assert= (first text-query-result) (->immut (-> (row text-query))))
+(assert= (first text-query-result) (->immut (row (exec text-query))))
 
 (assert= text-query-result (->immut (all text-query)))
 (assert= text-query-result (->immut (all (exec text-query))))
 
-(assert= nil (one "select 1 where false = true"))
-(assert= nil (one (exec "select 1 where false = true")))
+(assert= nil (row "select 1 where false = true"))
+(assert= nil (row (exec "select 1 where false = true")))
 
-(assert= 3 (scalar "select 3"))
-(assert= 3 (scalar (exec "select 3")))
+(assert= 3 (one "select 3"))
+(assert= 3 (one (exec "select 3")))
 
-(assert= nil (scalar "select 3 where false = true"))
-(assert= nil (scalar (exec "select 3 where false = true")))
+(assert= nil (one "select 3 where false = true"))
+(assert= nil (one (exec "select 3 where false = true")))
 
 (assert-deep= @["x" "y"] (col "select jsonb_array_elements_text(jsonb_build_array('x', 'y'))"))
 (assert-deep= @["x" "y"] (col (exec "select jsonb_array_elements_text(jsonb_build_array('x', 'y'))")))

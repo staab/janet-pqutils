@@ -64,13 +64,13 @@
    |(map-keys keyword $)
    (_pq/result-unpack (exec query ;params) pq/*decoders*)))
 
-(defn one [query & params]
+(defn row [query & params]
   (def result (all query ;params))
   (if (empty? result) nil (first result)))
 
-(defn scalar [query & params]
-  (if-let [row (one query ;params)]
-    (first (values row))))
+(defn one [query & params]
+  (if-let [r (row query ;params)]
+    (first (values r))))
 
 (defn col [query & params]
   (map |(first (values $)) (all query ;params)))
