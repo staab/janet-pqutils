@@ -1,4 +1,4 @@
-(use staab.assert/assert)
+(use assert)
 (use pqutils)
 
 (defn ->immut [x]
