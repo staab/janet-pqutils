@@ -1,17 +1,14 @@
-(import _pq)
 (import pq)
 (import codec)
 
+# Re-export some stuff
 (def *decoders* pq/*decoders*)
 (def json pq/json)
 (def jsonb pq/jsonb)
 
-(put *decoders* 19 keyword)
-(put *decoders* 1700 scan-number)
-
 (defn get-connection []
   (let [conn (dyn :pqutils/global-conn)]
-    (when (not= (type conn) :pq.context)
+    (when (not= (type conn) :pq/context)
       (error "dyn :pqutils/global-conn is not a connection object"))
     conn))
 
@@ -42,38 +39,28 @@
 
 (defn composite [& s] (string/join (map string s) " "))
 
-(defn exec
-  "Takes a string and executes it with the current connection, returing
-   a result. If a result is passed instead, it passes the result through.
-   This allows passing a result wherever you would otherwise pass a string
-   and re-use most of the query execution api."
-  [query & params]
-  (def result (if (= :pq.result (type query))
-                query
-                (_pq/exec (get-connection) query ;params)))
-  (if (_pq/error? result) (error result) result))
+(defn exec [query & params]
+  (if (= :pq/result (type query))
+    query
+    (pq/exec (get-connection) query ;params)))
 
 (defn count [& args] (pq/result-ntuples (exec ;args)))
 
-(defn- map-keys [f d]
-  (def ctor (if (= (type d) :table) table struct))
-  (ctor ;(mapcat (fn [[k v]] [(f k) v]) (pairs d))))
+(defn all [& args]
+  (pq/result-unpack (exec ;args) *decoders*))
 
-(defn all [query & params]
-  (map
-   |(map-keys keyword $)
-   (_pq/result-unpack (exec query ;params) pq/*decoders*)))
+(defn row [& args]
+  (def rows (all ;args))
+  (if (empty? rows) nil (first rows)))
 
-(defn row [query & params]
-  (def result (all query ;params))
-  (if (empty? result) nil (first result)))
+(defn col [& args]
+  (map |(first (values $)) (all ;args)))
 
-(defn val [query & params]
-  (if-let [r (row query ;params)]
-    (first (values r))))
-
-(defn col [query & params]
-  (map |(first (values $)) (all query ;params)))
+(defn val [& args]
+  (if-let [r (row ;args)
+           v (values r)]
+    (when (not (empty? v))
+      (first v))))
 
 (defn iter [query &opt opts & params]
   (let [chunk-size (literal (get opts :chunk-size 100))

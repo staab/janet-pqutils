@@ -9,27 +9,30 @@
 
 (def test-info "dbname = postgres")
 
-# Connection dyn var is required when doing anything. Connecting
-# sets the connection to pq.context by default
+(put *decoders* 1700 scan-number)
 
-(assert= :pq.context (type (connect test-info {:no-global true})))
+
+# Connection dyn var is required when doing anything. Connecting
+# sets the connection to pq/context by default
+
+(assert= :pq/context (type (connect test-info {:no-global true})))
 (assert-err (get-connection))
-(assert= :pq.context (type (connect test-info)))
-(assert= :pq.context (type (get-connection)))
+(assert= :pq/context (type (connect test-info)))
+(assert= :pq/context (type (get-connection)))
 (disconnect)
 (assert-err (get-connection))
 (with-connection [(connect test-info {:no-global true})]
-  (assert= :pq.context (type (get-connection))))
+  (assert= :pq/context (type (get-connection))))
 (assert-err (get-connection))
 (with-connect [test-info]
-  (assert= :pq.context (type (get-connection))))
+  (assert= :pq/context (type (get-connection))))
 (assert-err (get-connection))
 
 # Query functions
 
 (connect test-info)
 
-(assert= :pq.result (type (exec "select 1")))
+(assert= :pq/result (type (exec "select 1")))
 
 (def text-query
   (string/join
