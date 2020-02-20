@@ -1,3 +1,5 @@
+**Note**, this library is archived in favor of [janet-pq](https://github.com/andrewchambers/janet-pq) and [janet-utils](https://github.com/staab/janet-utils).
+
 # janet-pqutils
 
 A postgres utility library for Janet and [janet-pq](https://github.com/andrewchambers/janet-pq). To get started, check out the example program below:
